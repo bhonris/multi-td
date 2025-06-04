@@ -376,17 +376,26 @@ const GameMap: React.FC<GameMapProps> = ({
       setSmoothedEnemies([]);
     }
   }, [enemies]);
-
-  // Generate the path cells (in a real game, this would be based on level design)
+  // Generate the path cells to match the server-side path
   const pathCells: Position[] = [];
-  for (let x = 0; x < gridSize.width; x++) {
+
+  // Horizontal path at y=5 from x=0 to x=9
+  for (let x = 0; x <= 9; x++) {
     pathCells.push({ x, y: 5 });
   }
+
+  // Vertical path at x=9 going down from y=6 to y=9
   for (let y = 6; y <= 9; y++) {
     pathCells.push({ x: 9, y });
   }
-  for (let x = 9; x < gridSize.width; x++) {
+  // Horizontal path at y=9 from x=10 to x=20
+  for (let x = 10; x <= 20; x++) {
     pathCells.push({ x, y: 9 });
+  }
+
+  // Vertical path at x=20 going up from y=8 to y=0
+  for (let y = 8; y >= 0; y--) {
+    pathCells.push({ x: 20, y });
   }
 
   // Handle tower shooting logic

@@ -26,32 +26,36 @@ export const useGameGrid = (
         Array(width)
           .fill(null)
           .map(() => ({ isPath: false, isOccupied: false }))
-      );
-
-    // Define the enemy path through the grid
+      ); // Define the enemy path through the grid - matching server-side path in EnemyService.ts
     const path: Position[] = [];
 
-    // Horizontal path at y=5
-    for (let x = 0; x < width; x++) {
+    // Horizontal path at y=5 from x=0 to x=9
+    for (let x = 0; x <= 9; x++) {
       path.push({ x, y: 5 });
       if (newGrid[5] && newGrid[5][x]) {
         newGrid[5][x].isPath = true;
       }
     }
 
-    // Vertical path at x=9 going down
+    // Vertical path at x=9 going down from y=6 to y=9
     for (let y = 6; y <= 9; y++) {
       path.push({ x: 9, y });
       if (newGrid[y] && newGrid[y][9]) {
         newGrid[y][9].isPath = true;
       }
-    }
-
-    // Horizontal path at y=9 to the end
-    for (let x = 10; x < width; x++) {
+    } // Horizontal path at y=9 from x=10 to x=20
+    for (let x = 10; x <= 20; x++) {
       path.push({ x, y: 9 });
       if (newGrid[9] && newGrid[9][x]) {
         newGrid[9][x].isPath = true;
+      }
+    }
+
+    // Vertical path at x=20 going up from y=8 to y=0
+    for (let y = 8; y >= 0; y--) {
+      path.push({ x: 20, y });
+      if (newGrid[y] && newGrid[y][20]) {
+        newGrid[y][20].isPath = true;
       }
     }
 

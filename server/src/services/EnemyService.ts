@@ -277,10 +277,8 @@ export class EnemyService {
     for (let i = 1; i < 5; i++) {
       y++;
       path.push({ x, y });
-    }
-
-    // Go right
-    for (let i = 1; i < 10; i++) {
+    } // Go right
+    for (let i = 1; i <= 11; i++) {
       x++;
       path.push({ x, y });
     }
@@ -288,12 +286,6 @@ export class EnemyService {
     // Go up
     for (let i = 1; i < 10; i++) {
       y--;
-      path.push({ x, y });
-    }
-
-    // Go right to the edge
-    for (let i = 1; i < 10; i++) {
-      x++;
       path.push({ x, y });
     }
 
