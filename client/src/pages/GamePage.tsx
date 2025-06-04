@@ -276,16 +276,15 @@ const GamePage: React.FC = () => {
   const playerMoney = money[currentUser.id] || 0;
 
   return (
-    <GamePageContainer>
-      <GameContainer ref={gameRef}>        <GameMap
-        towers={towers}
-        enemies={enemies}
-        gridSize={{ width: 20, height: 15 }}
-        selectedTowerType={selectedTowerType}
-        selectedTower={selectedTower}
-        onMapClick={handleMapClick}
-      />
-      </GameContainer>
+    <GamePageContainer>      <GameContainer ref={gameRef}>        <GameMap
+      towers={towers}
+      enemies={enemies}
+      gridSize={{ width: 21, height: 15 }}
+      selectedTowerType={selectedTowerType}
+      selectedTower={selectedTower}
+      onMapClick={handleMapClick}
+    />
+    </GameContainer>
       <GameUI
         baseHealth={baseHealth}
         money={playerMoney}
