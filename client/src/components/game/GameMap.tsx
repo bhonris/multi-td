@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import useGameLoop from '../../hooks/useGameLoop';
 import { Enemy, Position, Tower, TowerType } from '../../types';
+import TowerSprite from './TowerSprite';
 
 interface GameMapProps {
   towers: Tower[];
@@ -45,56 +46,6 @@ const Cell = styled.div<{ isPath?: boolean }>`
   &:hover {
     box-shadow: inset 0 0 0 2px #4d9aff;
     cursor: pointer;
-  }
-`;
-
-const TowerElement = styled.div<{ towerType: TowerType; level: number }>`
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  position: absolute;
-  transform: translate(-50%, -50%);
-  z-index: 10;
-  border: 2px solid #777;
-  
-  ${props => {
-    switch (props.towerType) {
-      case 'basic':
-        return `
-          background-color: #4d9aff;
-        `;
-      case 'sniper':
-        return `
-          background-color: #e74c3c;
-        `;
-      case 'splash':
-        return `
-          background-color: #9b59b6;
-        `;
-      case 'slow':
-        return `
-          background-color: #3498db;
-        `;
-      case 'money':
-        return `
-          background-color: #f1c40f;
-        `;
-      default:
-        return `
-          background-color: #4d9aff;
-        `;
-    }
-  }}
-  
-  &::after {
-    content: "${props => props.level}";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: white;
-    font-weight: bold;
-    font-size: 14px;
   }
 `;
 
@@ -570,19 +521,24 @@ const GameMap: React.FC<GameMapProps> = ({
             const angle = Math.atan2(dy, dx) * (180 / Math.PI);
             rotationStyle = { transform: `translate(-50%, -50%) rotate(${angle}deg)` };
           }
-        }
-
-        return (
-          <TowerElement
+        }        return (
+          <div
             key={tower.id}
             style={{
+              position: 'absolute',
               top: position.top,
               left: position.left,
+              transform: 'translate(-50%, -50%)',
+              zIndex: 10,
               ...rotationStyle
             }}
-            towerType={tower.type}
-            level={tower.level}
-          />
+          >
+            <TowerSprite
+              type={tower.type}
+              level={tower.level}
+              size={36}
+            />
+          </div>
         );
       })}{/* Render projectiles */}
       {projectiles.map(projectile => {

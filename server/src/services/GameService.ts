@@ -441,9 +441,10 @@ export class GameService {
   }
 
   private getInitialMoney(difficulty: Difficulty): number {
+    console.log(`Setting initial money for difficulty: ${difficulty}`);
     switch (difficulty) {
       case "easy":
-        return 300;
+        return 1000;
       case "normal":
         return 200;
       case "hard":

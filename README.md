@@ -119,15 +119,15 @@ At the end of each level, a boss enemy will spawn. The boss will have significan
 1. Start the server:
 
    ```bash
-   # From the server directory
-   npm run dev
+   # From the root directory
+   npm run server
    ```
 
 2. In a separate terminal, start the client:
 
    ```bash
-   # From the client directory
-   npm start
+   # From the root directory
+   npm run client
    ```
 
 3. Open your browser and navigate to:

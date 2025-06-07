@@ -59,33 +59,28 @@ const TowerSelection = styled.div`
   align-items: center;
 `;
 
-const TowerOption = styled.div<{ type: TowerType; selected: boolean }>`
+const TowerOption = styled.div<{ selected: boolean }>`
   width: 50px;
   height: 50px;
-  border-radius: 50%;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   border: 2px solid ${props => props.selected ? '#4d9aff' : '#555'};
   box-shadow: ${props => props.selected ? '0 0 10px #4d9aff' : 'none'};
+  background-color: rgba(255, 255, 255, 0.1);
+  transition: all 0.2s ease;
   
-  ${props => {
-    switch (props.type) {
-      case 'basic':
-        return `background-color: #4d9aff;`;
-      case 'sniper':
-        return `background-color: #e74c3c;`;
-      case 'splash':
-        return `background-color: #9b59b6;`;
-      case 'slow':
-        return `background-color: #3498db;`;
-      case 'money':
-        return `background-color: #f1c40f;`;
-      default:
-        return `background-color: #4d9aff;`;
-    }
-  }}
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
+  }
+  
+  img {
+    width: 40px;
+    height: 40px;
+  }
 `;
 
 const TowerInfo = styled.div`
@@ -116,6 +111,223 @@ const StatName = styled.div`
 const StartWaveButton = styled(Button)`
   margin-left: 20px;
 `;
+
+const AdContainer = styled.div`
+  width: 200px;
+  height: 120px;
+  border: 2px solid #444;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #2c3e50, #34495e);
+  margin: 10px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+
+  &:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(77, 154, 255, 0.3);
+  }
+
+  &::before {
+    content: 'AD';
+    position: absolute;
+    top: 2px;
+    right: 5px;
+    font-size: 0.6rem;
+    color: #888;
+    background: #333;
+    padding: 1px 4px;
+    border-radius: 2px;
+  }
+`;
+
+const AdTitle = styled.h4`
+  margin: 0 0 5px 0;
+  font-size: 0.9rem;
+  color: #f39c12;
+  font-weight: bold;
+`;
+
+const AdText = styled.p`
+  margin: 0;
+  font-size: 0.7rem;
+  color: #ecf0f1;
+  line-height: 1.2;
+`;
+
+const AdBanner = styled.div`
+  background: linear-gradient(90deg, #e74c3c, #c0392b);
+  color: white;
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  text-align: center;
+  border-radius: 4px;
+  margin: 10px 0;
+  animation: pulse 2s infinite;
+
+  @keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+  }
+`;
+
+const AdSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  padding: 0 20px;
+  border-left: 1px solid #333;
+`;
+
+// Fake ad data
+const fakeAds = [
+  {
+    title: "Tower Insurance Co.",
+    text: "Protect your towers from enemy lawsuits! 99% of towers recommend us!",
+    clickText: "Get Quote Now!"
+  },
+  {
+    title: "Enemy Speed Dating",
+    text: "Tired of running alone? Meet other enemies in your area! Swipe right for chaos!",
+    clickText: "Find Love Today!"
+  },
+  {
+    title: "Base Health Supplements",
+    text: "Doctors HATE this one trick! Increase your base health by 500% instantly!",
+    clickText: "Order Now - $9.99"
+  },
+  {
+    title: "Tower University",
+    text: "Learn to shoot straight! Online courses in Advanced Projectile Physics!",
+    clickText: "Enroll Today!"
+  },
+  {
+    title: "Pixel Perfect Repairs",
+    text: "Is your tower looking pixelated? We fix graphics glitches while you wait!",
+    clickText: "Book Service"
+  },
+  {
+    title: "Enemy Relocation Services",
+    text: "Tired of the same old path? We help enemies find new routes to happiness!",
+    clickText: "Get Moving!"
+  },
+  {
+    title: "Splash Damage Lawyers",
+    text: "Collateral damage got you down? We sue towers for excessive splash radius!",
+    clickText: "Free Consultation"
+  },
+  {
+    title: "Money Tower MLM",
+    text: "Make money with money towers! Recruit 5 friends and become a Tower Boss!",
+    clickText: "Join Pyramid!"
+  },
+  {
+    title: "Slow Tower Therapy",
+    text: "Is your slow tower having an existential crisis? We provide counseling!",
+    clickText: "Book Session"
+  },
+  {
+    title: "Sniper Tower Dating App",
+    text: "Long distance relationships made easy! Connect with towers across the map!",
+    clickText: "Download App"
+  },
+  {
+    title: "GameStop 2: Electric Boogaloo",
+    text: "We buy used projectiles! Trade in your old ammo for store credit!",
+    clickText: "To The Moon! 🚀"
+  },
+  {
+    title: "Enemy Life Insurance",
+    text: "What happens to your family when you get splashed? We've got you covered!",
+    clickText: "Protect Family"
+  },
+  {
+    title: "Tower Whisperer Services",
+    text: "Is your tower not performing? I speak fluent Tower and can translate!",
+    clickText: "Book Consultation"
+  },
+  {
+    title: "Upgrade Addiction Anonymous",
+    text: "Can't stop upgrading towers? You're not alone. Meeting Tuesdays at 7PM.",
+    clickText: "Get Help Now"
+  },
+  {
+    title: "Enemy Fashion Week",
+    text: "Tired of the same old sprite? Upgrade your look with premium skins!",
+    clickText: "Shop Now"
+  },
+  {
+    title: "Tower Tinder Premium",
+    text: "Swipe right on compatible tower types! Find your perfect defensive match!",
+    clickText: "Upgrade Dating"
+  },
+  {
+    title: "Procrastination Station",
+    text: "Why defend your base now when you can do it later? Join millions of procrastinators!",
+    clickText: "Maybe Tomorrow"
+  },
+  {
+    title: "Enemy Uber",
+    text: "Skip the walking! Fast transport directly to your base. 5-star service guaranteed!",
+    clickText: "Request Ride"
+  },
+  {
+    title: "Tower Chef Academy",
+    text: "Learn to serve up destruction! Master classes in projectile preparation!",
+    clickText: "Enroll Now"
+  },
+  {
+    title: "Base Feng Shui",
+    text: "Is your base's energy flow blocking success? Realign your defensive chakras today!",
+    clickText: "Find Balance"
+  }
+];
+
+const getRandomAd = () => {
+  return fakeAds[Math.floor(Math.random() * fakeAds.length)];
+};
+
+const FakeAd: React.FC = () => {
+  const [currentAd, setCurrentAd] = React.useState(getRandomAd());
+
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentAd(getRandomAd());
+    }, 15000); // Change ad every 15 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleAdClick = () => {
+    // Rotate to a new ad immediately when clicked
+    setCurrentAd(getRandomAd());
+  };
+
+  return (
+    <AdContainer onClick={handleAdClick} title="Click for new ad!">
+      <AdTitle>{currentAd.title}</AdTitle>
+      <AdText>{currentAd.text}</AdText>
+      <AdBanner>{currentAd.clickText}</AdBanner>
+    </AdContainer>
+  );
+};
+
+const getTowerIcon = (type: TowerType) => {
+  try {
+    return require(`../../icons/${type}.svg`);
+  } catch (error) {
+    console.warn(`Could not load icon for tower type: ${type}`);
+    return require('../../icons/basic.svg'); // fallback
+  }
+};
 
 const getTowerInfo = (type: TowerType) => {
   switch (type) {
@@ -287,9 +499,7 @@ const GameUI: React.FC<GameUIProps> = ({
           <StatLabel>Wave</StatLabel>
           <StatValue>{wave}</StatValue>
         </StatItem>
-      </GameStats>
-
-      <TowerSelection>
+      </GameStats>      <TowerSelection>
         {towerTypes.map(type => {
           const towerInfo = getTowerInfo(type);
           const canAfford = money >= towerInfo.cost;
@@ -297,12 +507,16 @@ const GameUI: React.FC<GameUIProps> = ({
           return (
             <TowerOption
               key={type}
-              type={type}
               selected={selectedTowerType === type}
               onClick={() => handleTowerClick(type)}
               style={{ opacity: canAfford ? 1 : 0.5 }}
               title={`${towerInfo.name} - $${towerInfo.cost}`}
-            />
+            >
+              <img
+                src={getTowerIcon(type)}
+                alt={`${type} tower`}
+              />
+            </TowerOption>
           );
         })}
       </TowerSelection>
@@ -314,7 +528,10 @@ const GameUI: React.FC<GameUIProps> = ({
         onClick={onStartWave}
       >
         Start Wave
-      </StartWaveButton>
+      </StartWaveButton>      <AdSection>
+        <FakeAd />
+        <FakeAd />
+      </AdSection>
     </UIContainer>
   );
 };
