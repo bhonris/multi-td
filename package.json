@@ -4,7 +4,7 @@
   "description": "Tower Defense Game with Vibe",
   "main": "index.js",
   "scripts": {
-    "client": "cd client && npm start",
+    "client": "cd client && npm run dev",
     "server": "cd server && npm run dev",
     "build:client": "cd client && npm run build",
     "build:server": "cd server && npm run build",
