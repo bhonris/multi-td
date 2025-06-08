@@ -7,27 +7,82 @@ interface TowerSpriteProps {
   size: number;
 }
 
-const TowerSprite: React.FC<TowerSpriteProps> = ({ type, level, size }) => {
-  const getIconPath = () => {
-    // Use require to import SVG files dynamically
-    try {
-      return require(`../../icons/${type}.svg`);
-    } catch (error) {
-      console.warn(`Could not load icon for tower type: ${type}`);
-      return require('../../icons/basic.svg'); // fallback
-    }
-  };
+// Helper function to construct icon paths using Vite's import.meta.glob
+const iconModules = import.meta.glob('../../icons/*.svg');
 
-  return (
-    <div style={{ position: 'relative', width: size, height: size }}>      <img
-        src={getIconPath()}
-        alt={`${type} tower`}
+const getIconPath = async (type: TowerType): Promise<string> => {
+  const path = `../../icons/${type}.svg`;
+  const fallbackPath = '../../icons/basic.svg';
+  try {
+    if (iconModules[path]) {
+      const module = await iconModules[path]();
+      return (module as { default: string }).default;
+    }
+    console.warn(`Could not load icon for tower type: ${type}, attempting fallback.`);
+    const fallbackModule = await iconModules[fallbackPath]();
+    return (fallbackModule as { default: string }).default;
+  } catch (error) {
+    console.error(`Error loading icon for tower type: ${type}`, error);
+    // Attempt to load fallback again, or handle error appropriately
+    try {
+      const fallbackModule = await iconModules[fallbackPath]();
+      return (fallbackModule as { default: string }).default;
+    } catch (fallbackError) {
+      console.error('Error loading fallback icon:', fallbackError);
+      return ''; // Return empty string or a placeholder path if fallback also fails
+    }
+  }
+};
+
+const TowerSprite: React.FC<TowerSpriteProps> = ({ type, level, size }) => {
+  const [iconSrc, setIconSrc] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    getIconPath(type).then(src => {
+      if (isMounted) {
+        setIconSrc(src);
+      }
+    }).catch(err => {
+      console.error(`Failed to set icon source for ${type}:`, err);
+      // Optionally set a default/error icon source here if needed
+      if (isMounted) {
+        setIconSrc(''); // Set to empty or a placeholder if error occurs
+      }
+    });
+    return () => { isMounted = false; };
+  }, [type]);
+
+  if (!iconSrc) {
+    // Optional: return a placeholder or null while loading
+    return (
+      <div
         style={{
           width: size,
           height: size,
-          transform: 'rotate(90deg)',
+          backgroundColor: '#333',
+          borderRadius: '4px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
         }}
-      />
+        title={`Loading ${type} icon...`}
+      >
+        L
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ position: 'relative', width: size, height: size }}>      <img
+      src={iconSrc} // Use state variable for src
+      alt={`${type} tower`}
+      style={{
+        width: size,
+        height: size,
+        transform: 'rotate(90deg)',
+      }}
+    />
       {/* Level indicator */}
       <div
         style={{
@@ -50,6 +105,7 @@ const TowerSprite: React.FC<TowerSpriteProps> = ({ type, level, size }) => {
         {level}
       </div>
     </div>
-  );};
+  );
+};
 
 export default TowerSprite;

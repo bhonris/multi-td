@@ -1,6 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-import { Tower, TowerType } from '../../types';
+import type { Tower, TowerType } from '../../types'; // Changed to type-only import
 import Button from '../common/Button';
 
 interface GameUIProps {
@@ -76,10 +76,10 @@ const TowerOption = styled.div<{ selected: boolean }>`
     background-color: rgba(255, 255, 255, 0.2);
     transform: scale(1.05);
   }
-  
+
   img {
-    width: 40px;
-    height: 40px;
+    width: 35px;
+    height: 35px;
   }
 `;
 
@@ -320,14 +320,62 @@ const FakeAd: React.FC = () => {
   );
 };
 
-const getTowerIcon = (type: TowerType) => {
+// Helper function to construct icon paths
+// Vite handles dynamic imports with variable parts if they follow a certain pattern.
+// We construct a map of all possible icon paths.
+const iconModules = import.meta.glob('../../icons/*.svg');
+
+const getTowerIconPath = async (type: TowerType): Promise<string> => {
+  const path = `../../icons/${type}.svg`;
+  const fallbackPath = '../../icons/basic.svg';
   try {
-    return require(`../../icons/${type}.svg`);
+    if (iconModules[path]) {
+      const module = await iconModules[path]();
+      return (module as { default: string }).default;
+    }
+    console.warn(`Could not load icon for tower type: ${type}, attempting fallback.`);
+    const fallbackModule = await iconModules[fallbackPath]();
+    return (fallbackModule as { default: string }).default;
   } catch (error) {
-    console.warn(`Could not load icon for tower type: ${type}`);
-    return require('../../icons/basic.svg'); // fallback
+    console.error(`Error loading icon for tower type: ${type}`, error);
+    // If even fallback fails (e.g., basic.svg is missing), return a placeholder or handle error
+    // For now, let's assume basic.svg will always be there or throw error if not.
+    const fallbackModule = await iconModules[fallbackPath](); // try again
+    return (fallbackModule as { default: string }).default;
   }
 };
+
+// New component to handle asynchronous icon loading
+interface TowerIconProps {
+  type: TowerType;
+  alt: string;
+  style?: React.CSSProperties;
+}
+
+const TowerIcon: React.FC<TowerIconProps> = ({ type, alt, style }) => {
+  const [iconSrc, setIconSrc] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    getTowerIconPath(type).then(src => {
+      if (isMounted) {
+        setIconSrc(src);
+      }
+    }).catch(err => {
+      console.error("Failed to set icon source:", err);
+      // Optionally set a default/error icon source here
+    });
+    return () => { isMounted = false; };
+  }, [type]);
+
+  if (!iconSrc) {
+    // Optional: return a placeholder or null while loading
+    return <div style={{ width: 35, height: 35, backgroundColor: '#333', borderRadius: '4px' }} title="Loading icon..."></div>;
+  }
+
+  return <img src={iconSrc} alt={alt} style={style} />;
+};
+
 
 const getTowerInfo = (type: TowerType) => {
   switch (type) {
@@ -512,8 +560,8 @@ const GameUI: React.FC<GameUIProps> = ({
               style={{ opacity: canAfford ? 1 : 0.5 }}
               title={`${towerInfo.name} - $${towerInfo.cost}`}
             >
-              <img
-                src={getTowerIcon(type)}
+              <TowerIcon
+                type={type}
                 alt={`${type} tower`}
               />
             </TowerOption>

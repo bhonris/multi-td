@@ -37,7 +37,7 @@ class SocketManager {
   private static instance: SocketManager;
   private socket: Socket<ServerToClientEvents, ClientToServerEvents> | null =
     null;
-  private API_URL = process.env.REACT_APP_API_URL || "http://10.69.69.42:4000";
+  private API_URL = import.meta.env.VITE_API_URL || "http://10.69.69.42:4000";
 
   private constructor() {}
 
