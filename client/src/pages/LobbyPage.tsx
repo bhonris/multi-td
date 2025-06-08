@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
 import Button from '../components/common/Button';
 import { fetchGameState, gameUpdated, joinGame } from '../features/game/gameSlice';
-import { initializeSocket, socketConnected } from '../features/socket/socketSlice';
+import { initializeSocket } from '../features/socket/socketSlice';
 import { useGameBroadcast } from '../hooks/useGameBroadcast';
 import { useNotifications } from '../hooks/useNotifications';
 import { AppDispatch, RootState } from '../store';
@@ -12,6 +12,14 @@ import { Game } from '../types';
 import { checkServerSync, logGameState } from '../utils/debugHelpers';
 import socketManager from '../utils/socketManager';
 
+// Add global window type extension for navigation timer
+declare global {
+  interface Window {
+    _gameStartNavigationTimer?: ReturnType<typeof setTimeout>;
+  }
+}
+
+// Styled components (unchanged from original)
 const LobbyContainer = styled.div`
   display: flex;
   flex-direction: column;
@@ -123,6 +131,24 @@ const CopyButton = styled.button`
   }
 `;
 
+const StatusIndicator = styled.div<{ connected: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  color: ${props => props.connected ? '#2ecc71' : '#e74c3c'};
+  margin-top: 10px;
+  
+  &::before {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: ${props => props.connected ? '#2ecc71' : '#e74c3c'};
+  }
+`;
+
 const LobbyPage: React.FC<{}> = () => {
   const { gameId } = useParams<{ gameId: string }>();
   const navigate = useNavigate();
@@ -136,51 +162,69 @@ const LobbyPage: React.FC<{}> = () => {
   const currentPlayerInGame = currentGame?.players.find(p => p.id === currentUser?.id);
   const [isReady, setIsReady] = useState(currentPlayerInGame?.isReady || false);
   const [isStarting, setIsStarting] = useState(false);
+  const [socketConnected, setSocketConnected] = useState(false);
 
   const isMountedRef = useRef(true);
+  const gameStartCheckIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const gameStartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [gameJoined, setGameJoined] = useState(false);
+
+  // Track component mount state
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
+
+      // Clear any timers on unmount
+      if (gameStartCheckIntervalRef.current) {
+        clearInterval(gameStartCheckIntervalRef.current);
+      }
+      if (gameStartTimeoutRef.current) {
+        clearTimeout(gameStartTimeoutRef.current);
+      }
+      if (window._gameStartNavigationTimer) {
+        clearTimeout(window._gameStartNavigationTimer);
+      }
     };
   }, []);
 
+  // Update local ready state when game state changes
   useEffect(() => {
-    // Update local ready state when game state changes
     if (currentPlayerInGame) {
       setIsReady(currentPlayerInGame.isReady);
     }
   }, [currentPlayerInGame]);
 
+  // Redirect if not authenticated and fetch initial game state
   useEffect(() => {
     if (!isAuthenticated || !currentUser) {
-      // Direct to username-entry instead of login
       navigate('/username-entry');
       return;
     }
 
     if (gameId) {
-      // Initialize socket connection
       dispatch(initializeSocket());
-
-      // Fetch game state
       dispatch(fetchGameState(gameId));
     }
   }, [dispatch, gameId, isAuthenticated, currentUser, navigate]);
-
+  // Set up socket connection and event listeners
   useEffect(() => {
     const socket = socketManager.getSocket();
 
+    // Initialize socket if needed
     if (!socket && gameId && currentUser) {
-      // Initialize socket if it doesn't exist
       console.log('Socket not found, initializing...');
       socketManager.connect();
     }
 
     if (socket && gameId && currentUser) {
-      // Remove any existing listeners before adding new ones
+      // Track socket connection status for UI
+      setSocketConnected(socket.connected);
+
+      // Remove any existing listeners before adding new ones to prevent duplicates
       socket.off('connect');
+      socket.off('disconnect');
       socket.off('player-joined');
       socket.off('game-updated');
       socket.off('game-started');
@@ -188,8 +232,10 @@ const LobbyPage: React.FC<{}> = () => {
       // Setup socket event listeners
       socket.on('connect', () => {
         console.log('Socket connected with ID:', socket.id);
-        dispatch(socketConnected());
+        setSocketConnected(true);
+        dispatch({ type: 'socket/socketConnected' }); // Fix: use action object instead of boolean
 
+        console.log(connected, gameId, currentUser, currentGame, dispatch, navigate, notify);
         // Join the game room
         socket.emit('join-game', {
           gameId,
@@ -198,24 +244,35 @@ const LobbyPage: React.FC<{}> = () => {
         console.log('Emitted join-game event for', gameId);
 
         // Debug message to check game state
-        socket.emit('debug-rooms', { gameId }, (response) => {
+        socket.emit('debug-rooms', { gameId }, (response: any) => {
           console.log('Debug rooms response:', response);
         });
       });
 
+      socket.on('disconnect', () => {
+        console.log('Socket disconnected');
+        setSocketConnected(false);
+
+        // Fetch latest state when reconnected
+        if (gameId) {
+          dispatch(fetchGameState(gameId));
+        }
+      });
+
       // If already connected, make sure we join the game room
-      if (socket.connected) {
+      if (socket.connected && !gameJoined) {
+        setSocketConnected(true);
         socket.emit('join-game', {
           gameId,
           playerId: currentUser.id
         });
         console.log('Already connected, emitted join-game event for', gameId);
+        setGameJoined(true);
       }
 
       socket.on('player-joined', (data: any) => {
         console.log('Player joined game:', data);
         // Refresh game state when a new player joins
-        // This ensures all clients get the updated player list
         if (gameId) {
           dispatch(fetchGameState(gameId));
         }
@@ -236,7 +293,6 @@ const LobbyPage: React.FC<{}> = () => {
         }
 
         // Dispatch the gameUpdated action with the received data
-        // The reducer should handle merging this partial update
         dispatch(gameUpdated(updatedGameData));
 
         // If the update includes player info, update our local isReady state
@@ -246,41 +302,17 @@ const LobbyPage: React.FC<{}> = () => {
             setIsReady(updatedCurrentPlayer.isReady);
           }
         }
+
+        // Check if game state has been updated to running (as another way to detect game start)
+        if (updatedGameData.state === 'running' && gameId) {
+          console.log('Game state changed to running via game-updated event');
+          handleGameStarted(updatedGameData as Game);
+        }
       });
 
       socket.on('game-started', (game: any) => {
         console.log('Game started event received!', game);
-
-        if (currentUser && gameId) {
-          // Log detailed game state for debugging
-          logGameState(gameId, currentUser.id, game);
-        }
-
-        // Show a notification but don't block
-        const startingAlert = 'Game is starting! Navigating to game page...';
-        console.log(startingAlert);
-        // Use our non-blocking notification helper
-        notify(startingAlert, 'success');
-
-        // Update game state with the received data
-        dispatch(gameUpdated(game));
-
-        // Clear any existing timers to prevent duplicate navigation
-        if (window._gameStartNavigationTimer) {
-          clearTimeout(window._gameStartNavigationTimer);
-        }
-
-        // Navigate to game page when game starts
-        try {
-          console.log('Navigating to game page:', `/game/${gameId}`);
-          // Small delay to ensure the state is updated and alert is visible
-          window._gameStartNavigationTimer = setTimeout(() => {
-            console.log('Executing navigation to game page');
-            navigate(`/game/${gameId}`, { replace: true });
-          }, 1000);
-        } catch (error) {
-          console.error('Navigation error:', error);
-        }
+        handleGameStarted(game);
       });
 
       // Try to join the game if not already in it
@@ -303,6 +335,7 @@ const LobbyPage: React.FC<{}> = () => {
       return () => {
         console.log('Cleaning up socket event listeners');
         socket.off('connect');
+        socket.off('disconnect');
         socket.off('player-joined');
         socket.off('game-updated');
         socket.off('game-started');
@@ -310,6 +343,50 @@ const LobbyPage: React.FC<{}> = () => {
     }
   }, [connected, gameId, currentUser, currentGame, dispatch, navigate, notify]);
 
+  // Handler for game start events - centralized to avoid duplicate navigation
+  const handleGameStarted = (game: Game) => {
+    if (!gameId || !isMountedRef.current) return;
+
+    // Log detailed game state for debugging
+    if (currentUser && gameId) {
+      logGameState(gameId, currentUser.id, game);
+    }
+
+    // Only process if we're not already navigating
+    if (window._gameStartNavigationTimer) {
+      console.log('Navigation already in progress, ignoring duplicate start event');
+      return;
+    }
+
+    // Show a notification but don't block
+    const startingAlert = 'Game is starting! Navigating to game page...';
+    console.log(startingAlert);
+    notify(startingAlert, 'success');
+
+    // Update game state with the received data
+    dispatch(gameUpdated(game));
+
+    // Clear any existing check intervals
+    if (gameStartCheckIntervalRef.current) {
+      clearInterval(gameStartCheckIntervalRef.current);
+      gameStartCheckIntervalRef.current = null;
+    }
+
+    // Navigate to game page when game starts
+    try {
+      console.log('Navigating to game page:', `/game/${gameId}`);
+      window._gameStartNavigationTimer = setTimeout(() => {
+        if (isMountedRef.current) {
+          console.log('Executing navigation to game page');
+          navigate(`/game/${gameId}`, { replace: true });
+        }
+      }, 500); // Reduced delay for more responsiveness
+    } catch (error) {
+      console.error('Navigation error:', error);
+    }
+  };
+
+  // Use the game broadcast hooks for enhanced reliability
   const { broadcastPlayerReady, broadcastGameStart } = useGameBroadcast();
 
   const handleReadyToggle = () => {
@@ -383,7 +460,9 @@ const LobbyPage: React.FC<{}> = () => {
       logGameState(gameId, currentUser.id, currentGame);
     }
 
-    console.log('Starting game with enhanced broadcast method');    // Use the enhanced broadcast method for greater reliability
+    console.log('Starting game with enhanced broadcast method');
+
+    // Use the enhanced broadcast method for greater reliability
     if (gameId) {
       const success = broadcastGameStart(gameId, currentUser.id);
       if (!success) {
@@ -409,11 +488,15 @@ const LobbyPage: React.FC<{}> = () => {
 
     // Improved fallback: If game-started event is missed, check state periodically
     let fallbackAttempts = 0;
-    const MAX_FALLBACK_ATTEMPTS = 10; // 10 * 1s = 10 seconds max waiting time
-    const fallbackInterval = setInterval(() => {
+    const MAX_FALLBACK_ATTEMPTS = 6; // Reduced attempts with faster checking
+
+    // Store interval reference so we can clear it when component unmounts
+    gameStartCheckIntervalRef.current = setInterval(() => {
       if (!isMountedRef.current) {
-        console.log('Component unmounted, clearing game start check interval.');
-        clearInterval(fallbackInterval);
+        if (gameStartCheckIntervalRef.current) {
+          clearInterval(gameStartCheckIntervalRef.current);
+          gameStartCheckIntervalRef.current = null;
+        }
         return;
       }
 
@@ -422,64 +505,55 @@ const LobbyPage: React.FC<{}> = () => {
 
       if (fallbackAttempts >= MAX_FALLBACK_ATTEMPTS) {
         console.log('Max fallback attempts reached, stopping fallback checks.');
-        clearInterval(fallbackInterval);
+        if (gameStartCheckIntervalRef.current) {
+          clearInterval(gameStartCheckIntervalRef.current);
+          gameStartCheckIntervalRef.current = null;
+        }
         setIsStarting(false);
         return;
       }
 
-      console.log('Fallback: Checking game state for game start.');
+      // Check if socket is connected, try to rejoin the game room to ensure we receive events
+      const currentSocket = socketManager.getSocket();
+      if (currentSocket?.connected && currentUser && gameId) {
+        currentSocket.emit('join-game', {
+          gameId,
+          playerId: currentUser.id
+        });
+        console.log('Re-joined game room to ensure event reception');
+      }
 
       if (gameId) {
         dispatch(fetchGameState(gameId))
-          .then((action: any) => { // action is the result of the dispatched thunk
-            if (!isMountedRef.current) {
-              clearInterval(fallbackInterval);
-              return;
-            }
+          .then((action: any) => {
+            if (!isMountedRef.current || !gameStartCheckIntervalRef.current) return;
 
-            const gameFromServer = action.payload as Game; // Assuming payload is the game object
+            const gameFromServer = action.payload as Game;
 
-            // Log game state for debugging
-            if (currentUser && gameId) {
-              logGameState(gameId, currentUser.id, gameFromServer);
-            }
-
+            // Check if game is now in running state
             if (gameFromServer?.state === 'running') {
-              console.log('Fallback: Game state is "running". Navigating.');
-              // Ensure we are not already on the game page to avoid redundant navigation
-              if (!window.location.pathname.startsWith(`/game/${gameId}`)) {
-                // Clear interval before navigation
-                clearInterval(fallbackInterval);
-
-                // Show non-blocking notification
-                notify('Game is running! Navigating to game page...', 'success');
-
-                // Navigate after a short delay
-                setTimeout(() => {
-                  navigate(`/game/${gameId}`, { replace: true });
-                }, 500); // Reduced delay to be more responsive
-              } else {
-                clearInterval(fallbackInterval);
+              console.log('Fallback: Game state is "running". Handling game start.');
+              if (gameStartCheckIntervalRef.current) {
+                clearInterval(gameStartCheckIntervalRef.current);
+                gameStartCheckIntervalRef.current = null;
               }
+              handleGameStarted(gameFromServer);
             } else if (!isStarting) {
               // If we're no longer trying to start, clear the interval
-              clearInterval(fallbackInterval);
+              if (gameStartCheckIntervalRef.current) {
+                clearInterval(gameStartCheckIntervalRef.current);
+                gameStartCheckIntervalRef.current = null;
+              }
             }
-            // If game is still not running and we're still in starting state, keep checking
           })
           .catch((fetchError) => {
-            if (!isMountedRef.current) {
-              clearInterval(fallbackInterval);
-              return;
-            }
             console.error('Fallback: Error checking game start status:', fetchError);
-            // Don't reset isStarting here, keep trying
           });
       }
-    }, 2000); // Check more frequently (every 2 seconds)
+    }, 2000); // Check every 2 seconds
 
     // Create a timeout to stop checking and reset the button after a reasonable period
-    const fallbackTimeout = setTimeout(() => {
+    gameStartTimeoutRef.current = setTimeout(() => {
       if (!isMountedRef.current) return;
 
       // Before giving up, try one last time with a direct server check
@@ -491,37 +565,40 @@ const LobbyPage: React.FC<{}> = () => {
               .then((action: any) => {
                 const gameFromServer = action.payload;
                 if (gameFromServer?.state === 'running') {
-                  console.log('Final check: Game is running! Navigating...');
-                  navigate(`/game/${gameId}`, { replace: true });
+                  console.log('Final check: Game is running! Handling game start...');
+                  handleGameStarted(gameFromServer);
                   return;
                 }
 
                 // Give up
-                clearInterval(fallbackInterval);
+                if (gameStartCheckIntervalRef.current) {
+                  clearInterval(gameStartCheckIntervalRef.current);
+                  gameStartCheckIntervalRef.current = null;
+                }
                 setIsStarting(false);
                 console.log('Fallback timeout reached. Resetting start button.');
                 notify('The game start timed out. Please ensure all players are connected and try again.', 'error');
               });
           } else {
-            clearInterval(fallbackInterval);
+            if (gameStartCheckIntervalRef.current) {
+              clearInterval(gameStartCheckIntervalRef.current);
+              gameStartCheckIntervalRef.current = null;
+            }
             setIsStarting(false);
             console.log('Fallback timeout reached. Resetting start button.');
             notify('The game start timed out. Please ensure all players are connected and try again.', 'error');
           }
         });
       } else {
-        clearInterval(fallbackInterval);
+        if (gameStartCheckIntervalRef.current) {
+          clearInterval(gameStartCheckIntervalRef.current);
+          gameStartCheckIntervalRef.current = null;
+        }
         setIsStarting(false);
         console.log('Fallback timeout reached but no game ID available.');
         notify('Error: Game ID is missing', 'error');
       }
     }, 15000); // 15 seconds total timeout
-
-    // Clean up both the interval and timeout when component unmounts
-    return () => {
-      clearInterval(fallbackInterval);
-      clearTimeout(fallbackTimeout);
-    };
   };
 
   const handleLeaveGame = () => {
@@ -535,44 +612,6 @@ const LobbyPage: React.FC<{}> = () => {
         .catch(err => console.error('Failed to copy: ', err));
     }
   };
-
-  useEffect(() => {
-    // Only setup polling if we have a game ID and user
-    if (!gameId || !currentUser || !isAuthenticated) return;
-
-    // Check if we need polling as a fallback
-    const socket = socketManager.getSocket();
-    const needsPolling = !socket || !socket.connected;
-
-    console.log(`${needsPolling ? 'Setting up' : 'Skipping'} periodic game state polling (socket status: ${socket?.connected ? 'connected' : 'disconnected'})`);
-
-    // Only poll if socket is not connected
-    if (!needsPolling) return;
-
-    const pollInterval = setInterval(() => {
-      // Don't poll if the component has been unmounted
-      if (!isMountedRef.current) {
-        clearInterval(pollInterval);
-        return;
-      }
-
-      // Check if socket is now connected
-      const currentSocket = socketManager.getSocket();
-      if (currentSocket?.connected) {
-        console.log('Socket is now connected, stopping polling');
-        clearInterval(pollInterval);
-        return;
-      }
-
-      // Fetch the latest game state
-      console.log('Polling for game state updates...');
-      dispatch(fetchGameState(gameId));
-    }, 5000); // Poll every 5 seconds when socket is disconnected
-
-    return () => {
-      clearInterval(pollInterval);
-    };
-  }, [gameId, currentUser, isAuthenticated, dispatch, isMountedRef]);
 
   if (loading) {
     return (
@@ -682,6 +721,9 @@ const LobbyPage: React.FC<{}> = () => {
           <CopyButton onClick={handleCopyGameCode}>
             Copy Code
           </CopyButton>
+          <StatusIndicator connected={socketConnected}>
+            {socketConnected ? 'Connected' : 'Disconnected'}
+          </StatusIndicator>
         </GameCodeContainer>
       </LobbyCard>
     </LobbyContainer>

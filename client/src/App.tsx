@@ -7,7 +7,7 @@ import GamePage from './pages/GamePage';
 import HomePage from './pages/HomePage';
 import JoinGamePage from './pages/JoinGamePage';
 // Import real-time version of the Lobby
-import LobbyPage from './pages/LobbyPage.real-time';
+import LobbyPage from './pages/LobbyPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import UsernameEntryPage from './pages/UsernameEntryPage';
