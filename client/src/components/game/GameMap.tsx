@@ -296,8 +296,45 @@ const GameMap: React.FC<GameMapProps> = ({
   const mapRef = useRef<HTMLDivElement>(null);
   const [projectiles, setProjectiles] = useState<Projectile[]>([]);
   const [smoothedEnemies, setSmoothedEnemies] = useState<SmoothedEnemy[]>([]);
+  const [towerAngles, setTowerAngles] = useState<Record<string, number>>({});
 
   // console.log('GameMap received enemies prop:', JSON.stringify(enemies.map(e => ({ id: e.id, health: e.health, maxHealth: e.maxHealth }))));
+
+  // Update tower angles
+  useEffect(() => {
+    setTowerAngles(prevAngles => {
+      const newAngles = { ...prevAngles };
+      let hasChanges = false;
+
+      towers.forEach(tower => {
+        if (tower.target) {
+          const targetEnemy = enemies.find(enemy => enemy.id === tower.target);
+          if (targetEnemy) {
+            const dx = targetEnemy.position.x - tower.position.x;
+            const dy = targetEnemy.position.y - tower.position.y;
+            const calculatedAngle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+            if (newAngles[tower.id] !== calculatedAngle) {
+              newAngles[tower.id] = calculatedAngle;
+              hasChanges = true;
+            }
+          }
+          // If targetEnemy is not found, the angle for this tower (if it exists in newAngles) is preserved.
+        }
+        // If tower.target is null, the angle for this tower (if it exists in newAngles) is preserved.
+      });
+
+      // Clean up angles for towers that no longer exist
+      for (const towerId in newAngles) {
+        if (!towers.some(t => t.id === towerId)) {
+          delete newAngles[towerId];
+          hasChanges = true;
+        }
+      }
+
+      return hasChanges ? newAngles : prevAngles;
+    });
+  }, [towers, enemies]);
 
   // Create smoothed versions of enemies with interpolated positions
   useEffect(() => {
@@ -511,26 +548,20 @@ const GameMap: React.FC<GameMapProps> = ({
       {towers.map(tower => {
         const position = getCellPosition(tower.position);
 
-        // Calculate rotation angle if tower has a target
-        let rotationStyle = {};
-        if (tower.target) {
-          const targetEnemy = enemies.find(enemy => enemy.id === tower.target);
-          if (targetEnemy) {
-            const dx = targetEnemy.position.x - tower.position.x;
-            const dy = targetEnemy.position.y - tower.position.y;
-            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-            rotationStyle = { transform: `translate(-50%, -50%) rotate(${angle}deg)` };
-          }
-        }        return (
+        // Use stored angle for rotation, default to 0 if not set
+        const currentAngle = towerAngles[tower.id] || 0;
+        const rotationStyle = { transform: `translate(-50%, -50%) rotate(${currentAngle}deg)` };
+
+        return (
           <div
             key={tower.id}
             style={{
               position: 'absolute',
               top: position.top,
               left: position.left,
-              transform: 'translate(-50%, -50%)',
+              transform: 'translate(-50%, -50%)', // Base transform, will be overridden by rotationStyle if it has transform
               zIndex: 10,
-              ...rotationStyle
+              ...rotationStyle // Apply the rotation
             }}
           >
             <TowerSprite
