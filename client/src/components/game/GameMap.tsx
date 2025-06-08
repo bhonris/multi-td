@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import useGameLoop from '../../hooks/useGameLoop';
-import { Enemy, Position, Tower, TowerType } from '../../types';
+import type { Enemy, Position, Tower, TowerType } from '../../types';
 import TowerSprite from './TowerSprite';
 
 interface GameMapProps {

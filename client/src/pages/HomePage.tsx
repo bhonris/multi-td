@@ -103,13 +103,12 @@ const HomePage: React.FC = () => {
   const { isAuthenticated, currentUser } = useSelector((state: RootState) => state.user);
 
   const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard'>('normal');
-  const [maxPlayers, setMaxPlayers] = useState<number>(4);
   const handleCreateGame = async () => {
     if (isAuthenticated && currentUser) {
       try {
         const result = await dispatch(createGame({
           hostId: currentUser.id,
-          maxPlayers,
+          maxPlayers: 16,
           difficulty
         })).unwrap();
 
@@ -162,7 +161,7 @@ const HomePage: React.FC = () => {
             <Select
               id="difficulty"
               value={difficulty}
-              onChange={(e) => setDifficulty(e.target.value as any)}
+              onChange={(e) => setDifficulty(e.target.value as 'easy' | 'normal' | 'hard')}
             >
               <option value="easy">Easy</option>
               <option value="normal">Normal</option>
@@ -170,7 +169,7 @@ const HomePage: React.FC = () => {
             </Select>
           </FormGroup>
 
-          <FormGroup>
+          {/* <FormGroup>
             <Label htmlFor="maxPlayers">Max Players</Label>
             <Select
               id="maxPlayers"
@@ -181,7 +180,7 @@ const HomePage: React.FC = () => {
               <option value="3">3 Players</option>
               <option value="4">4 Players</option>
             </Select>
-          </FormGroup>
+          </FormGroup> */}
 
           <ButtonsContainer>
             <Button size="medium" onClick={handleCreateGame}>
