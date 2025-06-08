@@ -49,10 +49,23 @@ export class GameLoopService {
    * Stop the game loop for a specific game
    */
   stopGameLoop(gameId: string): void {
+    console.log(
+      `[GameLoopService] Attempting to stop game loop for gameId: ${gameId}`
+    );
     const interval = gameLoops.get(gameId);
     if (interval) {
+      console.log(
+        `[GameLoopService] Interval found for gameId: ${gameId}. Clearing interval.`
+      );
       clearInterval(interval);
       gameLoops.delete(gameId);
+      console.log(
+        `[GameLoopService] Interval cleared and deleted from map for gameId: ${gameId}. Active game loops: ${gameLoops.size}`
+      );
+    } else {
+      console.warn(
+        `[GameLoopService] No interval found for gameId: ${gameId} when trying to stop loop. It might have already been stopped or never started. Active game loops: ${gameLoops.size}`
+      );
     }
   }
 

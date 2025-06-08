@@ -50,6 +50,12 @@ export class GameService {
    */
   private handleGameUpdate(gameId: string, game: Game): void {
     // Update the game state in our local map
+    // Ensure the game still exists before updating and notifying
+    if (!games.has(gameId)) {
+      console.warn(`Game ${gameId} no longer exists. Skipping update.`);
+      this.gameLoopService.stopGameLoop(gameId); // Ensure loop is stopped if game is gone
+      return;
+    }
     games.set(gameId, game);
 
     // Notify all registered handlers
@@ -459,5 +465,25 @@ export class GameService {
       (tower) =>
         tower.position.x === position.x && tower.position.y === position.y
     );
+  }
+
+  async deleteGame(gameId: string): Promise<void> {
+    console.log(`[GameService] deleteGame called for gameId: ${gameId}`);
+    const game = games.get(gameId);
+    if (game) {
+      console.log(
+        `[GameService] Game ${gameId} found. Attempting to stop game loop.`
+      );
+      this.gameLoopService.stopGameLoop(gameId);
+      console.log(`[GameService] After calling stopGameLoop for ${gameId}.`);
+      games.delete(gameId);
+      console.log(
+        `[GameService] Game ${gameId} and its loop have been deleted from 'games' map. Remaining games: ${games.size}`
+      );
+    } else {
+      console.warn(
+        `[GameService] Attempted to delete non-existent game: ${gameId}`
+      );
+    }
   }
 }

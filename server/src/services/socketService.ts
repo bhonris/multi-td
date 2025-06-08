@@ -5,6 +5,8 @@ import { GameService } from "./GameService";
 
 export const setupSocket = (io: Server) => {
   const gameService = new GameService();
+  const socketIdToGameIdMap = new Map<string, string>(); // Map to store socket.id -> gameId
+
   // Register game update handler
   gameService.onGameUpdate((gameId: string, game: Game) => {
     // Debug: log enemy positions
@@ -44,12 +46,14 @@ export const setupSocket = (io: Server) => {
   });
 
   io.on("connection", (socket) => {
-    console.log(`User connected: ${socket.id}`); // Join a game room
+    console.log(`[SocketService] User connected: ${socket.id}`);
+
     socket.on("join-game", ({ gameId, playerId }) => {
       const roomName = `game-${gameId}`;
       socket.join(roomName);
+      socketIdToGameIdMap.set(socket.id, gameId); // Store the mapping
       console.log(
-        `Player ${playerId} (Socket ID: ${socket.id}) joined game room ${roomName}`
+        `[SocketService] Player ${playerId} (Socket ID: ${socket.id}) joined game room ${roomName}. Mapped socket to game.`
       );
 
       // Log rooms this socket is in
@@ -358,8 +362,56 @@ export const setupSocket = (io: Server) => {
 
     // Player disconnect
     socket.on("disconnect", () => {
-      console.log(`User disconnected: ${socket.id}`);
-      // TODO: Handle player disconnection
+      console.log(`[SocketService] User disconnected: ${socket.id}.`);
+      const gameId = socketIdToGameIdMap.get(socket.id);
+
+      if (gameId) {
+        console.log(
+          `[SocketService] Disconnected socket ${socket.id} was associated with gameId: ${gameId}.`
+        );
+        const roomName = `game-${gameId}`;
+
+        // Important: Wait a brief moment for Socket.IO to update adapter.rooms
+        setTimeout(() => {
+          const room = io.sockets.adapter.rooms.get(roomName);
+          const roomSize = room ? room.size : 0;
+          console.log(
+            `[SocketService] Game room ${roomName} (gameId: ${gameId}) current size after disconnect: ${roomSize}`
+          );
+
+          if (roomSize === 0) {
+            console.log(
+              `[SocketService] Game room ${roomName} (gameId: ${gameId}) is empty. Attempting to delete game.`
+            );
+            gameService
+              .deleteGame(gameId)
+              .then(() => {
+                console.log(
+                  `[SocketService] Successfully called deleteGame for ${gameId}.`
+                );
+              })
+              .catch((error: Error) => {
+                console.error(
+                  `[SocketService] Error calling deleteGame for ${gameId}:`,
+                  error
+                );
+              });
+          } else {
+            console.log(
+              `[SocketService] Game room ${roomName} (gameId: ${gameId}) is not empty. Size: ${roomSize}. Not deleting.`
+            );
+          }
+        }, 250); // 250ms delay, adjust if necessary
+
+        socketIdToGameIdMap.delete(socket.id); // Clean up the mapping
+        console.log(
+          `[SocketService] Unmapped socket ${socket.id} from game ${gameId}.`
+        );
+      } else {
+        console.log(
+          `[SocketService] Disconnected socket ${socket.id} was not mapped to any game.`
+        );
+      }
     });
   });
 };
