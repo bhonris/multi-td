@@ -1,7 +1,8 @@
+import { towerConfigurations } from '@shared/config/towerConfig';
+import type { Enemy, EnemyAbility, EnemyEffect, EnemyType, Position, Tower, TowerType } from '@shared/types'; // Corrected import path
 import React, { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import useGameLoop from '../../hooks/useGameLoop';
-import type { Enemy, Position, Tower, TowerType } from '../../types';
 import TowerSprite from './TowerSprite';
 
 interface GameMapProps {
@@ -43,6 +44,7 @@ const Cell = styled.div<{ isPath?: boolean }>`
   height: 40px;
   background-color: ${props => props.isPath ? '#2c4034' : '#1a2a25'};
   border: 1px solid #30443c;
+  position: relative; // Added for positioning RangeIndicator for hover preview
   &:hover {
     box-shadow: inset 0 0 0 2px #4d9aff;
     cursor: pointer;
@@ -281,8 +283,22 @@ const ImpactEffect = styled.div<{ towerType: TowerType, hitRadius?: number }>`
 `;
 
 // Interface for smoothed enemy position
-interface SmoothedEnemy extends Enemy {
-  visualPosition: Position;
+// Explicitly defining properties from Enemy to help with type resolution
+interface SmoothedEnemy {
+  id: string;
+  type: EnemyType;
+  health: number;
+  maxHealth: number;
+  position: Position;
+  speed: number;
+  reward: number;
+  damage: number;
+  abilities: EnemyAbility[];
+  effects: EnemyEffect[];
+  path: Position[];
+  pathIndex: number;
+  createdAt: Date;
+  visualPosition: Position; // Specific to SmoothedEnemy
 }
 
 const GameMap: React.FC<GameMapProps> = ({
@@ -291,14 +307,14 @@ const GameMap: React.FC<GameMapProps> = ({
   gridSize,
   selectedTowerType,
   selectedTower,
-  onMapClick
+  onMapClick,
 }) => {
-  const mapRef = useRef<HTMLDivElement>(null);
   const [projectiles, setProjectiles] = useState<Projectile[]>([]);
-  const [smoothedEnemies, setSmoothedEnemies] = useState<SmoothedEnemy[]>([]);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const [hoveredCell, setHoveredCell] = useState<Position | null>(null);
   const [towerAngles, setTowerAngles] = useState<Record<string, number>>({});
-
-  // console.log('GameMap received enemies prop:', JSON.stringify(enemies.map(e => ({ id: e.id, health: e.health, maxHealth: e.maxHealth }))));
+  const [smoothedEnemies, setSmoothedEnemies] = useState<SmoothedEnemy[]>([]);
+  const [impacts, setImpacts] = useState<{ position: Position, towerType: TowerType, timestamp: number, hitRadius?: number }[]>([]);
 
   // Update tower angles
   useEffect(() => {
@@ -309,7 +325,7 @@ const GameMap: React.FC<GameMapProps> = ({
       towers.forEach(tower => {
         if (tower.target) {
           const targetEnemy = enemies.find(enemy => enemy.id === tower.target);
-          if (targetEnemy) {
+          if (targetEnemy) { // Added condition to complete the if statement
             const dx = targetEnemy.position.x - tower.position.x;
             const dy = targetEnemy.position.y - tower.position.y;
             const calculatedAngle = Math.atan2(dy, dx) * (180 / Math.PI);
@@ -319,40 +335,31 @@ const GameMap: React.FC<GameMapProps> = ({
               hasChanges = true;
             }
           }
-          // If targetEnemy is not found, the angle for this tower (if it exists in newAngles) is preserved.
         }
-        // If tower.target is null, the angle for this tower (if it exists in newAngles) is preserved.
       });
 
-      // Clean up angles for towers that no longer exist
       for (const towerId in newAngles) {
         if (!towers.some(t => t.id === towerId)) {
           delete newAngles[towerId];
           hasChanges = true;
         }
       }
-
+      // Ensure the state setter returns the new state or the previous one
       return hasChanges ? newAngles : prevAngles;
     });
   }, [towers, enemies]);
 
-  // Create smoothed versions of enemies with interpolated positions
   useEffect(() => {
     if (enemies.length > 0) {
-      // Map actual enemies to smoothed enemies, preserving previous visual positions when possible
-      setSmoothedEnemies(prevSmoothed => {
-        return enemies.map(enemy => {
-          // Try to find existing smoothed enemy
-          const existing = prevSmoothed.find(e => e.id === enemy.id);
-
+      setSmoothedEnemies((prevSmoothed: SmoothedEnemy[]): SmoothedEnemy[] => {
+        return enemies.map((enemy: Enemy): SmoothedEnemy => {
+          const existing = prevSmoothed.find((e: SmoothedEnemy) => e.id === enemy.id);
           if (existing) {
-            // Keep the visual position from before to animate toward the new position
             return {
               ...enemy,
               visualPosition: { ...existing.visualPosition }
             };
           } else {
-            // New enemy, start with actual position
             return {
               ...enemy,
               visualPosition: { ...enemy.position }
@@ -364,47 +371,33 @@ const GameMap: React.FC<GameMapProps> = ({
       setSmoothedEnemies([]);
     }
   }, [enemies]);
-  // Generate the path cells to match the server-side path
-  const pathCells: Position[] = [];
 
-  // Horizontal path at y=5 from x=0 to x=9
+  const pathCells: Position[] = [];
   for (let x = 0; x <= 9; x++) {
     pathCells.push({ x, y: 5 });
   }
-
-  // Vertical path at x=9 going down from y=6 to y=9
   for (let y = 6; y <= 9; y++) {
     pathCells.push({ x: 9, y });
   }
-  // Horizontal path at y=9 from x=10 to x=20
   for (let x = 10; x <= 20; x++) {
     pathCells.push({ x, y: 9 });
   }
-
-  // Vertical path at x=20 going up from y=8 to y=0
   for (let y = 8; y >= 0; y--) {
     pathCells.push({ x: 20, y });
   }
 
-  // Handle tower shooting logic
   useEffect(() => {
     const newProjectiles: Projectile[] = [];
-
-    // Check each tower that has a target
     towers.forEach(tower => {
       if (tower.target) {
-        // Find the target enemy
         const targetEnemy = enemies.find(enemy => enemy.id === tower.target);
-
-        if (targetEnemy) {          // Create a new projectile if the tower just fired (within last 100ms)
+        if (targetEnemy) {
           const now = Date.now();
           if (now - tower.lastAttackTime < 100) {
-            // Calculate hit radius based on tower type - splash towers have larger radius
             const hitRadius = tower.type === 'splash' ? 1.5 :
               tower.type === 'basic' ? 0.8 :
                 tower.type === 'sniper' ? 0.5 :
                   tower.type === 'slow' ? 1.0 : 0.7;
-
             newProjectiles.push({
               id: `${tower.id}-${now}`,
               sourcePosition: tower.position,
@@ -417,76 +410,55 @@ const GameMap: React.FC<GameMapProps> = ({
         }
       }
     });
-
     if (newProjectiles.length > 0) {
       setProjectiles(prev => [...prev, ...newProjectiles]);
     }
-  }, [towers, enemies]);  // Effect for tower impacts - this will display splash effects
-  const [impacts, setImpacts] = useState<{ position: Position, towerType: TowerType, timestamp: number, hitRadius?: number }[]>([]);
-  // Update projectile positions and handle impacts using game loop
-  useGameLoop((deltaTime) => {
-    // Update projectile positions
-    setProjectiles(prev => {
+  }, [towers, enemies]);
+
+  useGameLoop((deltaTime: number) => {
+    setProjectiles((prevProjectiles: Projectile[]): Projectile[] => {
       const newImpacts: { position: Position, towerType: TowerType, timestamp: number, hitRadius?: number }[] = [];
-      // Move each projectile forward
-      const updatedProjectiles = prev.map(proj => {
-        // Make projectiles faster - complete in 200ms instead of 250ms
-        const newProgress = Math.min(proj.progress + (deltaTime / 200), 1);        // If projectile just reached its target or is close enough, create an impact effect
-        // This creates the area of effect visual - projectiles can hit even if they don't land directly on an enemy
-        const closeToTarget = newProgress > 0.9; // Allow hitting when close enough to target
+      const updatedProjectiles = prevProjectiles.map((proj: Projectile) => {
+        const newProgress = Math.min(proj.progress + (deltaTime / 200), 1);
+        const closeToTarget = newProgress > 0.9;
         if ((proj.progress < 1 && newProgress === 1) || (proj.progress < 0.9 && closeToTarget)) {
           newImpacts.push({
             position: proj.targetPosition,
             towerType: proj.towerType,
             timestamp: Date.now(),
-            hitRadius: proj.hitRadius // Pass the hit radius to the impact
+            hitRadius: proj.hitRadius
           });
         }
-
         return {
           ...proj,
           progress: newProgress
         };
       });
-
-      // Add any new impacts
       if (newImpacts.length > 0) {
         setImpacts(prevImpacts => [...prevImpacts, ...newImpacts]);
       }
-
-      // Remove projectiles that have reached their target
       return updatedProjectiles.filter(p => p.progress < 1);
     });
 
-    // Remove impacts after animation duration (600ms)
-    setImpacts(prev => prev.filter(impact => Date.now() - impact.timestamp < 600));
+    setImpacts((prevImpacts: { position: Position, towerType: TowerType, timestamp: number, hitRadius?: number }[]) =>
+      prevImpacts.filter(impact => Date.now() - impact.timestamp < 600)
+    );
 
-    // Smoothly interpolate enemy positions
-    setSmoothedEnemies(prevSmoothed => {
+    setSmoothedEnemies((prevSmoothed: SmoothedEnemy[]): SmoothedEnemy[] => {
       if (prevSmoothed.length === 0) return prevSmoothed;
-
-      return prevSmoothed.map(smoothedEnemy => {
-        // Find the corresponding real enemy 
-        const realEnemy = enemies.find(e => e.id === smoothedEnemy.id);
-
-        // If real enemy doesn't exist anymore, keep this one for one more frame
-        if (!realEnemy) return smoothedEnemy;        // Calculate how much to move towards the actual position
-        // Use a smooth interpolation factor - smaller number = slower/smoother movement
-        const interpolationSpeed = 0.05; // Further reduced from 0.08 for smoother movement
+      return prevSmoothed.map((smoothedEnemy: SmoothedEnemy) => {
+        const realEnemy = enemies.find((e: Enemy) => e.id === smoothedEnemy.id);
+        if (!realEnemy) return smoothedEnemy;
+        const interpolationSpeed = 0.05;
         const dx = realEnemy.position.x - smoothedEnemy.visualPosition.x;
         const dy = realEnemy.position.y - smoothedEnemy.visualPosition.y;
-
-        // Calculate distance to determine if we need to snap to final position
         const distance = Math.sqrt(dx * dx + dy * dy);
-
-        // If we're very close to the target position, just snap to it to avoid tiny movements
         if (distance < 0.01) {
           return {
             ...realEnemy,
             visualPosition: { ...realEnemy.position }
           };
         }
-
         return {
           ...realEnemy,
           visualPosition: {
@@ -499,70 +471,111 @@ const GameMap: React.FC<GameMapProps> = ({
   }, 60);
 
   const handleCellClick = (x: number, y: number) => {
-    // Check if the cell is on the path - don't allow building there
     if (pathCells.some(cell => cell.x === x && cell.y === y)) {
       return;
     }
-
     onMapClick({ x, y });
   };
 
-  const getCellPosition = (position: Position): { top: number; left: number } => {
-    const cellSize = 40; // Same as in the CSS
-    const padding = 10;
+  const handleCellMouseEnter = (x: number, y: number) => {
+    setHoveredCell({ x, y });
+  };
 
+  const handleCellMouseLeave = () => {
+    setHoveredCell(null);
+  };
+
+  const getCellPosition = (position: Position): { top: number; left: number } => {
+    const cellSize = 40;
+    const padding = 10;
     return {
       top: position.y * (cellSize + 1) + padding + cellSize / 2,
       left: position.x * (cellSize + 1) + padding + cellSize / 2,
     };
   };
 
-  // Calculate position of a projectile based on its progress
   const getProjectilePosition = (projectile: Projectile): { top: number; left: number } => {
     const sourcePos = getCellPosition(projectile.sourcePosition);
     const targetPos = getCellPosition(projectile.targetPosition);
-
-    // Linear interpolation between source and target based on progress
     return {
       top: sourcePos.top + (targetPos.top - sourcePos.top) * projectile.progress,
       left: sourcePos.left + (targetPos.left - sourcePos.left) * projectile.progress
     };
   };
 
+  const renderGrid = () => {
+    const gridCells = [];
+    for (let y = 0; y < gridSize.height; y++) {
+      for (let x = 0; x < gridSize.width; x++) {
+        const isPath = pathCells.some(cell => cell.x === x && cell.y === y);
+        const towerConfigForHover = selectedTowerType ? towerConfigurations[selectedTowerType as TowerType] : null;
+        gridCells.push(
+          <Cell
+            key={`${x}-${y}`}
+            isPath={isPath}
+            onClick={() => handleCellClick(x, y)}
+            onMouseEnter={() => handleCellMouseEnter(x, y)}
+            onMouseLeave={handleCellMouseLeave}
+          >
+            {selectedTowerType && towerConfigForHover && hoveredCell && hoveredCell.x === x && hoveredCell.y === y && !isPath && (
+              <RangeIndicator
+                range={towerConfigForHover.range}
+                style={{
+                  left: `20px`,
+                  top: `20px`,
+                }}
+              />
+            )}
+          </Cell>
+        );
+      }
+    }
+    return gridCells;
+  };
+
+  const renderSelectedTowerRange = () => {
+    if (selectedTower && mapRef.current) {
+      const towerConfig = towerConfigurations[selectedTower.type as TowerType];
+      if (!towerConfig) return null;
+      const cellSize = 40;
+      const mapPadding = 10;
+      const cellWithGap = cellSize + 1;
+      const left = selectedTower.position.x * cellWithGap + cellWithGap / 2 + mapPadding;
+      const top = selectedTower.position.y * cellWithGap + cellWithGap / 2 + mapPadding;
+      return (
+        <RangeIndicator
+          range={selectedTower.attributes.range}
+          style={{
+            left: `${left}px`,
+            top: `${top}px`,
+          }}
+        />
+      );
+    }
+    return null;
+  };
+
+  // The component must return a JSX element or null.
   return (
     <MapContainer ref={mapRef}>
       <Grid width={gridSize.width} height={gridSize.height}>
-        {Array.from({ length: gridSize.height }).map((_, y) =>
-          Array.from({ length: gridSize.width }).map((_, x) => {
-            const isPath = pathCells.some(cell => cell.x === x && cell.y === y);
-            return (
-              <Cell
-                key={`${x}-${y}`}
-                isPath={isPath}
-                onClick={() => handleCellClick(x, y)}
-              />
-            );
-          })
-        )}
-      </Grid>      {/* Render towers */}
+        {renderGrid()}
+      </Grid>
+      {renderSelectedTowerRange()}
       {towers.map(tower => {
         const position = getCellPosition(tower.position);
-
-        // Use stored angle for rotation, default to 0 if not set
         const currentAngle = towerAngles[tower.id] || 0;
-        const rotationStyle = { transform: `translate(-50%, -50%) rotate(${currentAngle}deg)` };
-
+        const towerStyle: React.CSSProperties = {
+          position: 'absolute',
+          top: position.top,
+          left: position.left,
+          transform: `translate(-50%, -50%) rotate(${currentAngle}deg)`,
+          zIndex: 10,
+        };
         return (
           <div
             key={tower.id}
-            style={{
-              position: 'absolute',
-              top: position.top,
-              left: position.left,
-              transform: 'translate(-50%, -50%)', // Base transform, will be overridden by rotationStyle if it has transform
-              zIndex: 10,
-              ...rotationStyle // Apply the rotation
-            }}
+            style={towerStyle}
           >
             <TowerSprite
               type={tower.type}
@@ -571,7 +584,7 @@ const GameMap: React.FC<GameMapProps> = ({
             />
           </div>
         );
-      })}{/* Render projectiles */}
+      })}
       {projectiles.map(projectile => {
         const position = getProjectilePosition(projectile);
         return (
@@ -581,7 +594,7 @@ const GameMap: React.FC<GameMapProps> = ({
             towerType={projectile.towerType}
           />
         );
-      })}      {/* Render impact effects */}
+      })}
       {impacts.map((impact, index) => {
         const position = getCellPosition(impact.position);
         return (
@@ -592,12 +605,10 @@ const GameMap: React.FC<GameMapProps> = ({
             hitRadius={impact.hitRadius}
           />
         );
-      })}{/* Render enemies with smoothed positions */}
-      {smoothedEnemies.map(enemy => {
+      })}
+      {smoothedEnemies.map((enemy: SmoothedEnemy) => {
         const position = getCellPosition(enemy.visualPosition || enemy.position);
         const healthPercent = (enemy.health / enemy.maxHealth) * 100;
-        console.log(`GameMap rendering enemy ID: ${enemy.id}, Health: ${enemy.health}, MaxHealth: ${enemy.maxHealth}, HealthPercent: ${healthPercent}`);
-
         return (
           <EnemyElement
             key={enemy.id}
@@ -606,41 +617,24 @@ const GameMap: React.FC<GameMapProps> = ({
             healthPercent={healthPercent}
           />
         );
-      })}{/* Show range indicator for the tower type being placed or the selected tower */}
-      {selectedTowerType ? (
-        // When placing a new tower, show the cursor range
+      })}
+      {/* Conditional rendering for range indicator based on selectedTowerType or selectedTower */}
+      {selectedTowerType && !selectedTower && towerConfigurations[selectedTowerType as TowerType] && (
         <RangeIndicator
-          key="range-preview"
+          key="range-preview-selected-type"
           style={{
-            top: `${(selectedTowerType === 'sniper' ? 150 : 100)}px`, // Approximate position
+            // This is just an example for a fixed preview, 
+            // ideally, this should follow the mouse or be centered on the potential build cell.
+            top: `50%`,
             left: '50%',
             opacity: 0.3,
             pointerEvents: 'none'
           }}
-          range={
-            selectedTowerType === 'basic' ? 3 :
-              selectedTowerType === 'sniper' ? 5 :
-                selectedTowerType === 'splash' ? 2.5 :
-                  selectedTowerType === 'slow' ? 2.5 :
-                    3 // Default
-          }
+          range={towerConfigurations[selectedTowerType as TowerType].range}
         />
-      ) : towers
-        .filter(tower => tower.id === (towers.find(t =>
-          t.position.x === (selectedTower?.position.x || -1) &&
-          t.position.y === (selectedTower?.position.y || -1))?.id))
-        .map(tower => {
-          const position = getCellPosition(tower.position);
-          return (
-            <RangeIndicator
-              key={`range-${tower.id}`}
-              style={{ top: position.top, left: position.left, opacity: 0.3 }}
-              range={tower.attributes.range}
-            />
-          );
-        })}
+      )}
     </MapContainer>
   );
-};
+}; // Added closing curly brace for the component
 
 export default GameMap;
