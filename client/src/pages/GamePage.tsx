@@ -1,3 +1,4 @@
+import type { Game, Position, Tower, TowerType } from '@shared/types'; // Updated import
 import React, { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -6,8 +7,7 @@ import GameMap from '../components/game/GameMap';
 import GameUI from '../components/game/GameUI';
 import { fetchGameState } from '../features/game/gameSlice';
 import { socketConnected } from '../features/socket/socketSlice';
-import { AppDispatch, RootState } from '../store';
-import { Position, Tower, TowerType } from '../types';
+import type { AppDispatch, RootState } from '../store'; // Use import type
 import socketManager from '../utils/socketManager';
 
 const GamePageContainer = styled.div`
@@ -28,12 +28,14 @@ const GamePage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
 
   const gameRef = useRef<HTMLDivElement>(null);
-  const { currentGame, towers, enemies, baseHealth, money } = useSelector((state: RootState) => state.game);
+  // Ensure state.game.currentGame is properly typed or handled if null
+  const { currentGame, towers, enemies, baseHealth, money } = useSelector((state: RootState) => state.game || {});
   const { currentUser } = useSelector((state: RootState) => state.user);
   const { connected } = useSelector((state: RootState) => state.socket);
 
   const [selectedTowerType, setSelectedTowerType] = useState<TowerType | null>(null);
-  const [selectedTower, setSelectedTower] = useState<Tower | null>(null); useEffect(() => {
+  const [selectedTower, setSelectedTower] = useState<Tower | null>(null);
+  useEffect(() => {
     console.log('GamePage mounted with gameId:', gameId, 'and user:', currentUser?.id);
 
     if (!gameId) {
@@ -115,42 +117,42 @@ const GamePage: React.FC = () => {
           console.log('Emitted join-game event from GamePage for', gameId);
         });
 
-        socket.on('game-updated', (gameData: any) => {
+        socket.on('game-updated', (gameData: Game) => { // Use Game type
           console.log('Game updated event received in GamePage');
           // No action needed - this is handled by 'game-state-update'
         });
 
-        socket.on('game-state-update', (gameData: any) => {
+        socket.on('game-state-update', (gameData: Partial<Game>) => { // Use Partial<Game> or a more specific type
           // Update enemy positions, towers, and game state
           dispatch({ type: 'game/gameUpdated', payload: gameData });
         });
 
-        socket.on('tower-built', (tower: any) => {
+        socket.on('tower-built', (tower: Tower) => { // Use Tower type
           console.log('Tower built event received:', tower);
           dispatch({ type: 'game/towerBuilt', payload: tower });
         });
 
-        socket.on('tower-upgraded', (tower: any) => {
+        socket.on('tower-upgraded', (tower: Tower) => { // Use Tower type
           console.log('Tower upgraded event received:', tower);
           dispatch({ type: 'game/towerUpgraded', payload: tower });
         });
 
-        socket.on('money-updated', (data: any) => {
+        socket.on('money-updated', (data: { playerId: string; money: number }) => { // More specific type
           console.log('Money updated event received:', data);
           dispatch({ type: 'game/moneyUpdated', payload: data });
         });
 
-        socket.on('wave-started', (waveData: any) => {
+        socket.on('wave-started', (waveData: { wave: number; enemies: any[] }) => { // Define a specific type for waveData if available
           console.log('Wave started event received:', waveData);
           dispatch({ type: 'game/waveStarted', payload: waveData });
         });
 
-        socket.on('enemy-damaged', (data: any) => {
+        socket.on('enemy-damaged', (data: { enemyId: string; damage: number; newHealth: number }) => { // More specific type
           console.log('Enemy damaged event received:', data);
           dispatch({ type: 'game/enemyDamaged', payload: data });
         });
 
-        socket.on('game-over', (result: any) => {
+        socket.on('game-over', (result: { victory: boolean; gameId: string }) => { // More specific type
           console.log('Game over event received:', result);
           // Handle game over
           alert(result.victory ? 'Victory!' : 'Game Over');
@@ -260,7 +262,7 @@ const GamePage: React.FC = () => {
         <div style={{ textAlign: 'center', margin: '2rem' }}>
           <h2>Loading game...</h2>
           <p>Please wait while the game data is being loaded</p>
-          {gameId && (
+          {gameId && !currentGame && (
             <div style={{ marginTop: '1rem' }}>
               <p>Game ID: {gameId}</p>
               <button onClick={() => dispatch(fetchGameState(gameId))}>
@@ -273,20 +275,20 @@ const GamePage: React.FC = () => {
     );
   }
 
-  const playerMoney = money[currentUser.id] || 0;
+  const playerMoney = money && currentUser ? money[currentUser.id] || 0 : 0;
 
   return (
     <GamePageContainer>      <GameContainer ref={gameRef}>        <GameMap
-      towers={towers}
-      enemies={enemies}
-      gridSize={{ width: 21, height: 15 }}
+      towers={towers || []} // Ensure towers is not undefined
+      enemies={enemies || []} // Ensure enemies is not undefined
+      gridSize={{ width: 21, height: 15 }} // Example, adjust as needed
       selectedTowerType={selectedTowerType}
       selectedTower={selectedTower}
       onMapClick={handleMapClick}
     />
     </GameContainer>
       <GameUI
-        baseHealth={baseHealth}
+        baseHealth={baseHealth !== undefined ? baseHealth : (currentGame?.baseHealth || 0)} // Ensure baseHealth is not undefined
         money={playerMoney}
         wave={currentGame.wave}
         onTowerSelect={handleTowerSelect}

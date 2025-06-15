@@ -1,8 +1,9 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { Enemy, Game, Tower } from "../../types";
+import type { Enemy, Game, Tower } from "@shared/types"; // Updated import
 import api from "../../utils/api";
 
-interface GameState {
+export interface GameState {
+  // Export GameState
   currentGame: Game | null;
   currentWave: number;
   baseHealth: number;

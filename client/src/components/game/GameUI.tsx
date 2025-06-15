@@ -1,6 +1,7 @@
+import { towerConfigurations } from '@shared/config/towerConfig';
+import type { Tower, TowerType } from "@shared/types";
 import React from 'react';
 import styled from 'styled-components';
-import type { Tower, TowerType } from '../../types'; // Changed to type-only import
 import Button from '../common/Button';
 
 interface GameUIProps {
@@ -376,74 +377,69 @@ const TowerIcon: React.FC<TowerIconProps> = ({ type, alt, style }) => {
   return <img src={iconSrc} alt={alt} style={style} />;
 };
 
-
+// Reinstated getTowerInfo for UI-specific details like name and description
 const getTowerInfo = (type: TowerType) => {
+  // Costs will be overridden by towerConfigurations later
   switch (type) {
     case 'basic':
       return {
         name: 'Basic Tower',
-        cost: 100,
         description: 'Balanced tower with medium range and damage.',
-        stats: {
-          Damage: 20,
-          Range: 3,
-          Cooldown: '1s',
-        }
+        stats: { Damage: 20, Range: 3, Cooldown: '1s' },
+        cost: towerConfigurations.basic.cost, // Get cost from shared config
       };
     case 'sniper':
       return {
         name: 'Sniper Tower',
-        cost: 200,
         description: 'Long range tower with high damage but slow firing rate.',
-        stats: {
-          Damage: 50,
-          Range: 6,
-          Cooldown: '2s',
-        }
+        stats: { Damage: 50, Range: 6, Cooldown: '2s' },
+        cost: towerConfigurations.sniper.cost,
       };
     case 'splash':
       return {
         name: 'Splash Tower',
-        cost: 150,
         description: 'Deals area damage to multiple enemies.',
-        stats: {
-          Damage: 15,
-          Range: 2,
-          Cooldown: '1.5s',
-          'Splash Radius': 1,
-        }
+        stats: { Damage: 15, Range: 2, Cooldown: '1.5s', 'Splash Radius': 1 },
+        cost: towerConfigurations.splash.cost,
       };
     case 'slow':
       return {
         name: 'Slow Tower',
-        cost: 150,
         description: 'Slows down enemies in its range.',
-        stats: {
-          Damage: 5,
-          Range: 3,
-          Cooldown: '1s',
-          'Slow Effect': '30%',
-        }
+        stats: { Damage: 5, Range: 3, Cooldown: '1s', 'Slow Effect': '30%' },
+        cost: towerConfigurations.slow.cost,
       };
     case 'money':
       return {
         name: 'Money Tower',
-        cost: 200,
         description: 'Generates bonus money when killing enemies.',
-        stats: {
-          Damage: 10,
-          Range: 4,
-          Cooldown: '1s',
-          'Money Bonus': '20%',
-        }
+        stats: { Damage: 10, Range: 4, Cooldown: '1s', 'Money Bonus': '20%' },
+        cost: towerConfigurations.money.cost,
       };
-    default:
+    case 'rapidFire': // Added rapidFire
+      return {
+        name: 'Rapid Fire Tower',
+        description: 'Attacks very quickly with moderate damage.',
+        stats: { Damage: 10, Range: 2.5, Cooldown: '0.3s' }, // Example stats
+        cost: towerConfigurations.rapidFire?.cost || 175, // Get cost or fallback
+      };
+    case 'support': // Added support
+      return {
+        name: 'Support Tower',
+        description: 'Boosts nearby towers.',
+        stats: { Range: 3, 'Support Bonus': '10%', 'Support Radius': 2 }, // Example stats
+        cost: towerConfigurations.support?.cost || 225, // Get cost or fallback
+      };
+    default: {
+      const exhaustiveCheck: never = type;
+      console.warn(`Unknown tower type in getTowerInfo: ${exhaustiveCheck}`);
       return {
         name: 'Unknown Tower',
         cost: 0,
         description: '',
         stats: {}
       };
+    }
   }
 };
 
@@ -461,25 +457,36 @@ const GameUI: React.FC<GameUIProps> = ({
     onTowerSelect(type);
   };
 
-  const towerTypes: TowerType[] = ['basic', 'sniper', 'splash', 'slow', 'money'];
+  // Reinstated towerTypes for UI iteration, sourcing cost from towerConfigurations
+  const towerTypesForUI: { type: TowerType; name: string; cost: number }[] = [
+    { type: "basic", name: "Basic", cost: towerConfigurations.basic.cost },
+    { type: "sniper", name: "Sniper", cost: towerConfigurations.sniper.cost },
+    { type: "splash", name: "Splash", cost: towerConfigurations.splash.cost },
+    { type: "slow", name: "Slow", cost: towerConfigurations.slow.cost },
+    { type: "money", name: "Money", cost: towerConfigurations.money.cost },
+    { type: "rapidFire", name: "Rapid Fire", cost: towerConfigurations.rapidFire?.cost || 0 }, // Added, ensure rapidFire exists in config
+    { type: "support", name: "Support", cost: towerConfigurations.support?.cost || 0 }, // Added, ensure support exists in config
+  ];
 
   const renderTowerInfo = () => {
     if (selectedTower) {
-      const towerInfo = getTowerInfo(selectedTower.type);
+      const uiInfo = getTowerInfo(selectedTower.type);
       const upgradeCost = selectedTower.attributes.upgradeCost;
-      const isMaxLevel = selectedTower.level >= 3;
+      const MAX_TOWER_LEVEL = 3; // Example, should ideally come from shared config (e.g. gameSettingsConfig.maxTowerLevel)
+      const isMaxLevel = selectedTower.level >= MAX_TOWER_LEVEL;
 
       return (
         <TowerInfo>
-          <TowerTitle>{towerInfo.name} (Level {selectedTower.level})</TowerTitle>
-          <p>{towerInfo.description}</p>
+          <TowerTitle>{uiInfo.name} (Level {selectedTower.level})</TowerTitle>
+          <p>{uiInfo.description}</p>
           <TowerStats>
             {Object.entries(selectedTower.attributes).map(([key, value]) => {
               if (key !== 'cost' && key !== 'upgradeCost') {
+                const displayName = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
                 return (
                   <React.Fragment key={key}>
-                    <StatName>{key.charAt(0).toUpperCase() + key.slice(1)}</StatName>
-                    <div>{value}</div>
+                    <StatName>{displayName}</StatName>
+                    <div>{String(value)}</div>
                   </React.Fragment>
                 );
               }
@@ -501,22 +508,22 @@ const GameUI: React.FC<GameUIProps> = ({
     }
 
     if (selectedTowerType) {
-      const towerInfo = getTowerInfo(selectedTowerType);
-      const canAfford = money >= towerInfo.cost;
+      const uiInfo = getTowerInfo(selectedTowerType);
+      const canAfford = money >= uiInfo.cost;
 
       return (
         <TowerInfo>
-          <TowerTitle>{towerInfo.name}</TowerTitle>
-          <p>{towerInfo.description}</p>
+          <TowerTitle>{uiInfo.name}</TowerTitle>
+          <p>{uiInfo.description}</p>
           <TowerStats>
-            {Object.entries(towerInfo.stats).map(([key, value]) => (
+            {Object.entries(uiInfo.stats).map(([key, value]) => (
               <React.Fragment key={key}>
                 <StatName>{key}</StatName>
-                <div>{value}</div>
+                <div>{String(value)}</div>
               </React.Fragment>
             ))}
           </TowerStats>
-          <div>Cost: ${towerInfo.cost}</div>
+          <div>Cost: ${uiInfo.cost}</div>
           {!canAfford && <div style={{ color: '#e74c3c' }}>Not enough money</div>}
         </TowerInfo>
       );
@@ -547,22 +554,23 @@ const GameUI: React.FC<GameUIProps> = ({
           <StatLabel>Wave</StatLabel>
           <StatValue>{wave}</StatValue>
         </StatItem>
-      </GameStats>      <TowerSelection>
-        {towerTypes.map(type => {
-          const towerInfo = getTowerInfo(type);
-          const canAfford = money >= towerInfo.cost;
+      </GameStats>
+      <TowerSelection>
+        {towerTypesForUI.map(towerData => {
+          // const towerInfo = getTowerInfo(towerData.type); // Not needed if towerData has cost
+          const canAfford = money >= towerData.cost;
 
           return (
             <TowerOption
-              key={type}
-              selected={selectedTowerType === type}
-              onClick={() => handleTowerClick(type)}
+              key={towerData.type}
+              selected={selectedTowerType === towerData.type}
+              onClick={() => handleTowerClick(towerData.type)}
               style={{ opacity: canAfford ? 1 : 0.5 }}
-              title={`${towerInfo.name} - $${towerInfo.cost}`}
+              title={`${towerData.name} - $${towerData.cost}`}
             >
               <TowerIcon
-                type={type}
-                alt={`${type} tower`}
+                type={towerData.type}
+                alt={`${towerData.name} tower`}
               />
             </TowerOption>
           );

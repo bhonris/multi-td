@@ -1,25 +1,28 @@
-import express, { RequestHandler } from "express";
-import { GameController } from "../controllers/GameController";
+import express, { RequestHandler, Router } from "express";
+import {
+  createGame,
+  getGameState,
+  joinGame,
+} from "../controllers/GameController";
 
 const router = express.Router();
-const gameController = new GameController();
 
 // Get game state
 const getGameHandler: RequestHandler = async (req, res) => {
-  await gameController.getGameState(req, res);
+  await getGameState(req, res);
 };
 router.get("/:gameId", getGameHandler);
 
 // Create a new game
 const createGameHandler: RequestHandler = async (req, res) => {
-  await gameController.createGame(req, res);
+  await createGame(req, res);
 };
 router.post("/", createGameHandler);
 
 // Join a game
 const joinGameHandler: RequestHandler = async (req, res) => {
-  await gameController.joinGame(req, res);
+  await joinGame(req, res);
 };
 router.post("/:gameId/join", joinGameHandler);
 
-export const gameRoutes = router;
+export const gameRoutes: Router = router;

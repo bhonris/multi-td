@@ -1,6 +1,5 @@
+import { BuildTowerResult, Game, UpgradeTowerResult } from "@shared/types"; // Corrected path for Game and other types
 import { Server } from "socket.io";
-import { Game } from "../models/Game";
-import { BuildTowerResult, UpgradeTowerResult } from "../types";
 import { GameService } from "./GameService";
 
 export const setupSocket = (io: Server) => {
@@ -31,7 +30,7 @@ export const setupSocket = (io: Server) => {
       baseHealth: game.baseHealth,
       wave: game.wave,
       state: game.state,
-      money: game.money,
+      money: game.money, // This should be the game.money object or individual player money needs to be handled
       players: game.players, // Send player data if it can change (e.g. money, stats)
       updatedAt: game.updatedAt, // Send timestamp for debugging or sequencing
     });
@@ -169,18 +168,21 @@ export const setupSocket = (io: Server) => {
       gameService
         .buildTower(gameId, playerId, towerType, position)
         .then((result: BuildTowerResult) => {
-          if (result.success && result.tower) {
+          if (result.success && result.tower && result.game) {
+            const playerMoney = result.game.players.find(
+              (p) => p.id === playerId
+            )?.money;
             console.log(`Tower built successfully:`, {
               towerId: result.tower.id,
               type: result.tower.type,
               position: result.tower.position,
-              remainingMoney: result.money,
+              remainingMoney: playerMoney, // Access money via game.players
             }); // Emit to room
             const roomName = `game-${gameId}`;
             io.to(roomName).emit("tower-built", result.tower);
             io.to(roomName).emit("money-updated", {
               playerId,
-              money: result.money,
+              money: playerMoney, // Access money via game.players
             });
 
             // Debug info
@@ -191,7 +193,7 @@ export const setupSocket = (io: Server) => {
             socket.emit("tower-built", result.tower);
             socket.emit("money-updated", {
               playerId,
-              money: result.money,
+              money: playerMoney, // Access money via game.players
             });
 
             // Try to find all sockets for this player and emit to them directly
@@ -207,13 +209,13 @@ export const setupSocket = (io: Server) => {
                 s.emit("tower-built", result.tower);
                 s.emit("money-updated", {
                   playerId,
-                  money: result.money,
+                  money: playerMoney, // Access money via game.players
                 });
               });
             }
           } else {
-            console.error(`Tower build failed: ${result.error}`);
-            socket.emit("build-error", { message: result.error });
+            console.error(`Tower build failed: ${result.message}`); // Use result.message
+            socket.emit("build-error", { message: result.message }); // Use result.message
           }
         })
         .catch((error) => {
@@ -229,14 +231,17 @@ export const setupSocket = (io: Server) => {
       gameService
         .upgradeTower(gameId, playerId, towerId)
         .then((result: UpgradeTowerResult) => {
-          if (result.success) {
+          if (result.success && result.tower && result.game) {
+            const playerMoney = result.game.players.find(
+              (p) => p.id === playerId
+            )?.money;
             io.to(`game-${gameId}`).emit("tower-upgraded", result.tower);
             io.to(`game-${gameId}`).emit("money-updated", {
               playerId,
-              money: result.money,
+              money: playerMoney, // Access money via game.players
             });
           } else {
-            socket.emit("upgrade-error", { message: result.error });
+            socket.emit("upgrade-error", { message: result.message }); // Use result.message
           }
         });
     });

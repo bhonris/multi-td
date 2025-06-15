@@ -1,5 +1,5 @@
+import { User, UserStats } from "@shared/types"; // Updated import
 import { v4 as uuidv4 } from "uuid";
-import { User, UserStats } from "../models/User";
 
 // In a real application, this would interact with a database
 // Here, we'll just use an in-memory map

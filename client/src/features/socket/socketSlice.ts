@@ -1,7 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
 import socketManager from "../../utils/socketManager";
 
-interface SocketState {
+export interface SocketState {
   connected: boolean;
 }
 

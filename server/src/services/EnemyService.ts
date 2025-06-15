@@ -1,7 +1,17 @@
+import {
+  defaultEnemyAttributes,
+  enemyAttributeScalers,
+  enemyConfigurations,
+} from "@shared/config/enemyConfig";
+import { wavePatterns } from "@shared/config/wavePatterns";
+import {
+  Difficulty,
+  Enemy,
+  EnemyAbility,
+  EnemyType,
+  Position,
+} from "@shared/types";
 import { v4 as uuidv4 } from "uuid";
-import { Enemy, EnemyAbility, EnemyType } from "../models/Enemy";
-import { Difficulty } from "../models/Game";
-import { Position } from "../models/Tower";
 
 const ENEMY_SPAWN_DELAY_MS = 500; // Spawn an enemy every 0.5 seconds
 
@@ -12,10 +22,15 @@ export class EnemyService {
     waveStartTime: number
   ): Enemy[] {
     const enemies: Enemy[] = [];
-    // const now = new Date(); // 'now' is replaced by waveStartTime for staggering
+    const wavePattern =
+      wavePatterns.find(
+        (wp) =>
+          (!wp.minWave || waveNumber >= wp.minWave) &&
+          (!wp.maxWave || waveNumber <= wp.maxWave)
+      ) || wavePatterns[wavePatterns.length - 1]; // Fallback to last pattern
 
-    // Base number of enemies increases with wave number
-    const baseEnemyCount = Math.floor(10 + 5 * waveNumber);
+    // Base number of enemies from wave pattern or calculated
+    const baseEnemyCount = Math.floor(10 + 5 * waveNumber); // Removed wavePattern.count
 
     // Adjust based on difficulty
     const difficultyMultiplier = this.getDifficultyMultiplier(difficulty);
@@ -24,167 +39,134 @@ export class EnemyService {
     // Generate path (in a real game, this would be predefined or generated based on the map)
     const path = this.generatePath();
 
-    // Generate enemies
     for (let i = 0; i < enemyCount; i++) {
-      const enemyType = this.getEnemyTypeForWave(waveNumber, i, enemyCount);
+      let enemyType = wavePattern.defaultType;
+      for (const rule of wavePattern.rules) {
+        if (rule.condition(i, enemyCount)) {
+          enemyType = rule.type;
+          break; // First matching rule applies
+        }
+      }
+
       const spawnTime = new Date(waveStartTime + i * ENEMY_SPAWN_DELAY_MS);
       const enemy: Enemy = {
         id: uuidv4(),
         type: enemyType,
         health: this.getEnemyHealth(enemyType, waveNumber, difficulty),
         maxHealth: this.getEnemyHealth(enemyType, waveNumber, difficulty),
-        position: { ...path[0] }, // Start at the beginning of the path
-        speed: this.getEnemySpeed(enemyType, difficulty),
+        position: { ...path[0] },
+        speed: this.getEnemySpeed(enemyType, waveNumber, difficulty),
         reward: this.getEnemyReward(enemyType, waveNumber),
         damage: this.getEnemyDamage(enemyType, waveNumber, difficulty),
         abilities: this.getEnemyAbilities(enemyType, waveNumber),
         effects: [],
-        path: [...path], // Clone the path
+        path: [...path],
         pathIndex: 0,
-        createdAt: spawnTime, // Use the calculated staggered spawn time
+        createdAt: spawnTime,
       };
-
-      // Delay enemy spawn time
       enemies.push(enemy);
     }
 
-    // Add boss at the end of each 5 waves
+    // Add boss based on wave pattern or existing logic
+    // const bossTypeFromPattern = wavePattern.boss; // wavePattern.boss does not exist
+    // For now, relying on the wave number for boss spawning.
+    // This logic might need to be integrated with WavePattern.rules if specific boss types are defined there.
+    let bossType: EnemyType | null = null;
+
+    // Check if any rule defines a boss type for this wave
+    // This is a placeholder for a more robust boss determination logic based on rules
+    // For example, a rule could specify { type: "boss", condition: () => true } for a boss wave.
+    // Or a specific enemy type like 'waveBoss' could be introduced.
+
     if (waveNumber % 5 === 0) {
+      // Existing fallback logic for boss waves
+      // Attempt to find a 'boss' type if defined in enemyConfigurations, or use a default 'boss'
+      bossType = enemyConfigurations.boss ? "boss" : null; // Assuming 'boss' is a valid EnemyType
+      if (!bossType) {
+        // Fallback if 'boss' is not in enemyConfigurations, but it's a boss wave
+        // This part might need adjustment based on how boss types are actually defined
+        // For now, we'll assume a generic "boss" type if one isn't specifically configured
+        // but is expected for the wave.
+        // This could also be a point to check wavePattern.rules for a boss type.
+        const bossRule = wavePattern.rules.find((rule) =>
+          rule.type.includes("boss")
+        ); // Simple check
+        if (bossRule) {
+          bossType = bossRule.type;
+        } else {
+          // If no specific boss rule, and waveNumber % 5 === 0, we might still want a boss.
+          // This depends on game design. For now, let's use the generic "boss" type.
+          // This assumes "boss" is a defined EnemyType in your types.
+          bossType = "boss";
+        }
+      }
+    }
+
+    if (bossType) {
       const bossSpawnTime = new Date(
         waveStartTime + enemyCount * ENEMY_SPAWN_DELAY_MS
-      ); // Boss spawns after all normal enemies in the wave
+      );
       const bossEnemy: Enemy = {
         id: uuidv4(),
-        type: "boss",
-        health: this.getEnemyHealth("boss", waveNumber, difficulty),
-        maxHealth: this.getEnemyHealth("boss", waveNumber, difficulty),
-        position: { ...path[0] }, // Start at the beginning of the path
-        speed: this.getEnemySpeed("boss", difficulty),
-        reward: this.getEnemyReward("boss", waveNumber),
-        damage: this.getEnemyDamage("boss", waveNumber, difficulty),
-        abilities: this.getEnemyAbilities("boss", waveNumber),
+        type: bossType,
+        health: this.getEnemyHealth(bossType, waveNumber, difficulty),
+        maxHealth: this.getEnemyHealth(bossType, waveNumber, difficulty),
+        position: { ...path[0] },
+        speed: this.getEnemySpeed(bossType, waveNumber, difficulty),
+        reward: this.getEnemyReward(bossType, waveNumber),
+        damage: this.getEnemyDamage(bossType, waveNumber, difficulty),
+        abilities: this.getEnemyAbilities(bossType, waveNumber),
         effects: [],
-        path: [...path], // Clone the path
+        path: [...path],
         pathIndex: 0,
-        createdAt: bossSpawnTime, // Boss also gets a specific spawnTime
+        createdAt: bossSpawnTime,
       };
-
       enemies.push(bossEnemy);
     }
+    // Removed the second boss block as the logic is consolidated above.
 
     return enemies;
   }
 
-  private getEnemyTypeForWave(
-    waveNumber: number,
-    enemyIndex: number,
-    totalEnemies: number
-  ): EnemyType {
-    // Mix of different enemy types depending on wave number
-    if (waveNumber < 3) {
-      // Early waves only have basic enemies
-      return "basic";
-    } else if (waveNumber < 5) {
-      // Introduce some fast enemies
-      return enemyIndex % 5 === 0 ? "fast" : "basic";
-    } else if (waveNumber < 10) {
-      // Add tank enemies
-      if (enemyIndex % 5 === 0) return "fast";
-      if (enemyIndex % 7 === 0) return "tank";
-      return "basic";
-    } else {
-      // Add healer enemies in later waves
-      if (enemyIndex % 5 === 0) return "fast";
-      if (enemyIndex % 7 === 0) return "tank";
-      if (enemyIndex % 10 === 0) return "healer";
-      return "basic";
-    }
-  }
+  // Removed getEnemyTypeForWave as it's now handled by wavePatterns
 
   private getEnemyHealth(
     type: EnemyType,
     waveNumber: number,
     difficulty: Difficulty
   ): number {
-    const waveMultiplier = 1 + (waveNumber - 1) * 0.2;
+    const baseAttributes = enemyConfigurations[type] || defaultEnemyAttributes;
+    const waveMultiplier =
+      1 + (waveNumber - 1) * (enemyAttributeScalers.healthWaveFactor || 0);
     const difficultyMultiplier = this.getDifficultyMultiplier(difficulty);
-
-    let baseHealth: number;
-    switch (type) {
-      case "basic":
-        baseHealth = 100;
-        break;
-      case "fast":
-        baseHealth = 70;
-        break;
-      case "tank":
-        baseHealth = 250;
-        break;
-      case "healer":
-        baseHealth = 120;
-        break;
-      case "boss":
-        baseHealth = 1000 + waveNumber * 200;
-        break;
-      default:
-        baseHealth = 100;
-    }
-
-    return Math.floor(baseHealth * waveMultiplier * difficultyMultiplier);
+    return Math.floor(
+      baseAttributes.health * waveMultiplier * difficultyMultiplier
+    );
   }
-  private getEnemySpeed(type: EnemyType, difficulty: Difficulty): number {
+
+  private getEnemySpeed(
+    type: EnemyType,
+    waveNumber: number,
+    difficulty: Difficulty
+  ): number {
+    // Added waveNumber for consistency, though not used by current scaler
+    const baseAttributes = enemyConfigurations[type] || defaultEnemyAttributes;
     const difficultyMultiplier = this.getDifficultyMultiplier(difficulty);
-    const globalSpeedFactor = 0.3; // Significantly increased from 0.8
-
-    let baseSpeed: number;
-    switch (type) {
-      case "basic":
-        baseSpeed = 0.5; // Increased from 0.5
-        break;
-      case "fast":
-        baseSpeed = 2.0; // Increased from 1.5
-        break;
-      case "tank":
-        baseSpeed = 1.0; // Increased from 0.8
-        break;
-      case "healer":
-        baseSpeed = 1.2; // Increased from 0.9
-        break;
-      case "boss":
-        baseSpeed = 0.8; // Increased from 0.6
-        break;
-      default:
-        baseSpeed = 1;
-    }
-
-    return baseSpeed * difficultyMultiplier * globalSpeedFactor;
+    // Assuming globalSpeedFactor might be intended to apply to all, or could be per-enemy type
+    // For now, using the direct speed from config, adjusted by difficulty.
+    // If globalSpeedFactor is meant to be a wave-based increment, the formula would need adjustment.
+    const speedMultiplier =
+      0.3 + (waveNumber - 1) * (enemyAttributeScalers.globalSpeedFactor || 0); // Example if speed scales with waves
+    return parseFloat(
+      (baseAttributes.speed * difficultyMultiplier * speedMultiplier).toFixed(2)
+    );
   }
 
   private getEnemyReward(type: EnemyType, waveNumber: number): number {
-    const waveMultiplier = 1 + (waveNumber - 1) * 0.1;
-
-    let baseReward: number;
-    switch (type) {
-      case "basic":
-        baseReward = 5;
-        break;
-      case "fast":
-        baseReward = 8;
-        break;
-      case "tank":
-        baseReward = 15;
-        break;
-      case "healer":
-        baseReward = 12;
-        break;
-      case "boss":
-        baseReward = 100;
-        break;
-      default:
-        baseReward = 5;
-    }
-
-    return Math.floor(baseReward * waveMultiplier);
+    const baseAttributes = enemyConfigurations[type] || defaultEnemyAttributes;
+    const waveMultiplier =
+      1 + (waveNumber - 1) * (enemyAttributeScalers.rewardWaveFactor || 0);
+    return Math.floor(baseAttributes.reward * waveMultiplier);
   }
 
   private getEnemyDamage(
@@ -192,64 +174,46 @@ export class EnemyService {
     waveNumber: number,
     difficulty: Difficulty
   ): number {
-    const waveMultiplier = 1 + (waveNumber - 1) * 0.15;
+    const baseAttributes = enemyConfigurations[type] || defaultEnemyAttributes;
+    const waveMultiplier =
+      1 + (waveNumber - 1) * (enemyAttributeScalers.damageWaveFactor || 0);
     const difficultyMultiplier = this.getDifficultyMultiplier(difficulty);
-
-    let baseDamage: number;
-    switch (type) {
-      case "basic":
-        baseDamage = 1;
-        break;
-      case "fast":
-        baseDamage = 1;
-        break;
-      case "tank":
-        baseDamage = 2;
-        break;
-      case "healer":
-        baseDamage = 1;
-        break;
-      case "boss":
-        baseDamage = 10;
-        break;
-      default:
-        baseDamage = 1;
-    }
-
-    return Math.floor(baseDamage * waveMultiplier * difficultyMultiplier);
+    return Math.floor(
+      baseAttributes.damage * waveMultiplier * difficultyMultiplier
+    );
   }
+
   private getEnemyAbilities(
     type: EnemyType,
-    waveNumber: number
+    waveNumber: number // waveNumber can be used for conditional abilities
   ): EnemyAbility[] {
-    switch (type) {
-      case "basic":
-        return [];
-      case "fast":
-        return waveNumber > 10 ? ["speed" as EnemyAbility] : [];
-      case "tank":
-        return waveNumber > 12 ? ["shield" as EnemyAbility] : [];
-      case "healer":
-        return ["heal" as EnemyAbility];
-      case "boss":
-        // Bosses get more abilities as waves progress
-        const abilities: EnemyAbility[] = ["shield" as EnemyAbility];
-        if (waveNumber >= 10) abilities.push("regen" as EnemyAbility);
-        if (waveNumber >= 15) abilities.push("spawn" as EnemyAbility);
-        return abilities;
-      default:
-        return [];
+    const baseAttributes = enemyConfigurations[type] || defaultEnemyAttributes;
+    let abilities = [...baseAttributes.abilities]; // Start with base abilities
+
+    // Example of conditional abilities based on waveNumber (can be expanded)
+    if (type === "fast" && waveNumber > 5) {
+      if (!abilities.includes("speed")) abilities.push("speed");
     }
+    if (type === "tank" && waveNumber > 8) {
+      if (!abilities.includes("shield")) abilities.push("shield");
+    }
+    if (type === "boss") {
+      // Boss might get more abilities in later waves
+      if (waveNumber > 10 && !abilities.includes("regen"))
+        abilities.push("regen");
+    }
+    return abilities;
   }
 
   private getDifficultyMultiplier(difficulty: Difficulty): number {
+    // This could also be moved to a game settings configuration if it becomes more complex
     switch (difficulty) {
       case "easy":
         return 0.8;
       case "normal":
         return 1.0;
       case "hard":
-        return 1.3;
+        return 1.2;
       default:
         return 1.0;
     }

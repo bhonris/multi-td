@@ -1,5 +1,5 @@
+import { Game } from "../../../shared/types"; // Adjusted import path
 import { Enemy, EnemyEffect } from "../models/Enemy";
-import { Game } from "../models/Game";
 import { AttackService } from "./AttackService";
 import { EnemyService } from "./EnemyService";
 
@@ -107,7 +107,7 @@ export class GameLoopService {
     if (game.pendingEnemies && game.pendingEnemies.length > 0) {
       const newlySpawnedEnemies: Enemy[] = [];
       // Filter pendingEnemies, moving due enemies to newlySpawnedEnemies
-      game.pendingEnemies = game.pendingEnemies.filter((enemy) => {
+      game.pendingEnemies = game.pendingEnemies.filter((enemy: Enemy) => {
         if (now >= enemy.createdAt.getTime()) {
           // enemy.createdAt is used as its spawnTime
           newlySpawnedEnemies.push(enemy);
@@ -165,7 +165,7 @@ export class GameLoopService {
       console.log(`Current path index: ${game.enemies[0]?.pathIndex}`);
     }
 
-    game.enemies.forEach((enemy) => {
+    game.enemies.forEach((enemy: Enemy) => {
       // Skip dead enemies
       if (enemy.health <= 0) return;
 
@@ -231,7 +231,7 @@ export class GameLoopService {
    * Handle enemies that have reached the end of the path
    */
   private handleEnemiesAtEnd(game: Game): void {
-    game.enemies.forEach((enemy) => {
+    game.enemies.forEach((enemy: Enemy) => {
       // Skip enemies that haven't reached the end
       if (enemy.pathIndex < enemy.path.length - 1) return;
 
@@ -244,7 +244,7 @@ export class GameLoopService {
 
     // Remove enemies that have reached the end
     game.enemies = game.enemies.filter(
-      (e) => e.health > 0 && e.pathIndex < e.path.length - 1
+      (e: Enemy) => e.health > 0 && e.pathIndex < e.path.length - 1
     );
   }
 

@@ -1,8 +1,8 @@
 import { AnyAction, ThunkDispatch } from "@reduxjs/toolkit";
 import { useCallback } from "react";
 import { useDispatch } from "react-redux";
+import { Game } from "../../../shared/types";
 import { fetchGameState } from "../features/game/gameSlice";
-import { Game } from "../types";
 import { logGameState } from "../utils/debugHelpers";
 import socketManager from "../utils/socketManager";
 

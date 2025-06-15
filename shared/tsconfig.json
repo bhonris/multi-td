@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "es2020",
+    "module": "commonjs",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "dist", // Optional: if you want to compile shared code separately
+    "composite": true // Important for project references
+  },
+  "include": ["**/*"],
+  "exclude": ["node_modules", "dist"]
+}

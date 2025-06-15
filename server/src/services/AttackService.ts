@@ -1,6 +1,4 @@
-import { Enemy, EnemyEffect } from "../models/Enemy";
-import { Game } from "../models/Game";
-import { Position, Tower } from "../models/Tower";
+import { Enemy, EnemyEffect, Game, Position, Tower } from "@shared/types";
 
 export class AttackService {
   /**

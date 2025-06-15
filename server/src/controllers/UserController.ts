@@ -1,13 +1,9 @@
 import { Request, Response } from "express";
 import { UserService } from "../services/UserService";
 
+const userService = new UserService();
+
 export class UserController {
-  private userService: UserService;
-
-  constructor() {
-    this.userService = new UserService();
-  }
-
   register = async (req: Request, res: Response) => {
     try {
       const { username, password, email } = req.body;
@@ -18,12 +14,12 @@ export class UserController {
           .json({ error: "Username, password and email are required" });
       }
 
-      const existingUser = await this.userService.getUserByUsername(username);
+      const existingUser = await userService.getUserByUsername(username);
       if (existingUser) {
         return res.status(400).json({ error: "Username already exists" });
       }
 
-      const user = await this.userService.createUser({
+      const user = await userService.createUser({
         username,
         password,
         email,
@@ -47,7 +43,7 @@ export class UserController {
           .json({ error: "Username and password are required" });
       }
 
-      const user = await this.userService.validateUser(username, password);
+      const user = await userService.validateUser(username, password);
 
       if (!user) {
         return res.status(401).json({ error: "Invalid username or password" });
@@ -57,7 +53,7 @@ export class UserController {
         id: user.id,
         username: user.username,
         email: user.email,
-        token: this.userService.generateToken(user),
+        token: userService.generateToken(user),
       });
     } catch (error) {
       console.error("Error logging in:", error);
@@ -68,7 +64,7 @@ export class UserController {
   getProfile = async (req: Request, res: Response) => {
     try {
       const { userId } = req.params;
-      const user = await this.userService.getUserById(userId);
+      const user = await userService.getUserById(userId);
 
       if (!user) {
         return res.status(404).json({ error: "User not found" });
@@ -91,7 +87,7 @@ export class UserController {
       const { userId } = req.params;
       const updates = req.body;
 
-      const user = await this.userService.updateUser(userId, updates);
+      const user = await userService.updateUser(userId, updates);
 
       if (!user) {
         return res.status(404).json({ error: "User not found" });

@@ -21,7 +21,17 @@
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+
+    /* Added for shared directory */
+    "baseUrl": ".", // Or "./src" if you prefer paths relative to src
+    "paths": {
+      "@shared/*": ["../shared/*"] // Path to shared directory
+    },
+    "composite": true // Required for project references
   },
-  "include": ["src"]
+  "include": ["src"],
+  "references": [
+    { "path": "../shared" } // Reference to the shared project
+  ]
 }

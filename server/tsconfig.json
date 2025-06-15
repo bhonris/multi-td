@@ -2,14 +2,28 @@
   "compilerOptions": {
     "target": "es6",
     "module": "commonjs",
-    "rootDir": "src",
+    // "rootDir": "src", // Removed rootDir
+    "baseUrl": ".", // Changed to project root
+    "paths": {
+      "@shared/*": ["../shared/*"] // Adjusted path relative to new baseUrl
+    },
     "outDir": "dist",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "composite": true // Required for project references
+  },
+  "ts-node": {
+    "require": ["tsconfig-paths/register"]
+    // You might also consider adding "transpileOnly": true here for faster
+    // startup times in development, as type checking can be handled by your IDE
+    // or a separate `tsc --noEmit` command.
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "**/*.test.ts"]
+  "exclude": ["node_modules", "**/*.test.ts"],
+  "references": [
+    { "path": "../shared" } // Reference to the shared project
+  ]
 }
