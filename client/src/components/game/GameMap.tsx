@@ -91,7 +91,7 @@ const EnemyElement = styled.div<{ type: string; healthPercent: number }>`
     left: 0;
     height: 3px;
     width: 100%;
-    background-color: #333;
+    background-color: #ff0000; // Changed to bright red
   }
   
   &::after {
