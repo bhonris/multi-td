@@ -379,56 +379,67 @@ const TowerIcon: React.FC<TowerIconProps> = ({ type, alt, style }) => {
 
 // Reinstated getTowerInfo for UI-specific details like name and description
 const getTowerInfo = (type: TowerType) => {
+  const config = towerConfigurations[type];
+  if (!config) {
+    console.warn(`Unknown tower type in getTowerInfo: ${type}`);
+    return {
+      name: 'Unknown Tower',
+      cost: 0,
+      description: '',
+      stats: {}
+    };
+  }
+
   // Costs will be overridden by towerConfigurations later
   switch (type) {
     case 'basic':
       return {
         name: 'Basic Tower',
         description: 'Balanced tower with medium range and damage.',
-        stats: { Damage: 20, Range: 3, Cooldown: '1s' },
-        cost: towerConfigurations.basic.cost, // Get cost from shared config
+        stats: { Damage: config.damage, Range: config.range, Cooldown: `${config.cooldown / 1000}s` },
+        cost: config.cost, // Get cost from shared config
       };
     case 'sniper':
       return {
         name: 'Sniper Tower',
         description: 'Long range tower with high damage but slow firing rate.',
-        stats: { Damage: 50, Range: 6, Cooldown: '2s' },
-        cost: towerConfigurations.sniper.cost,
+        stats: { Damage: config.damage, Range: config.range, Cooldown: `${config.cooldown / 1000}s` },
+        cost: config.cost,
       };
     case 'splash':
       return {
         name: 'Splash Tower',
         description: 'Deals area damage to multiple enemies.',
-        stats: { Damage: 15, Range: 2, Cooldown: '1.5s', 'Splash Radius': 1 },
-        cost: towerConfigurations.splash.cost,
+        stats: { Damage: config.damage, Range: config.range, Cooldown: `${config.cooldown / 1000}s`, 'Splash Radius': config.splashRadius },
+        cost: config.cost,
       };
     case 'slow':
       return {
         name: 'Slow Tower',
         description: 'Slows down enemies in its range.',
-        stats: { Damage: 5, Range: 3, Cooldown: '1s', 'Slow Effect': '30%' },
-        cost: towerConfigurations.slow.cost,
+        stats: { Damage: config.damage, Range: config.range, Cooldown: `${config.cooldown / 1000}s`, 'Slow Effect': `${(config.slowFactor || 0) * 100}%` },
+        cost: config.cost,
       };
     case 'money':
       return {
         name: 'Money Tower',
         description: 'Generates bonus money when killing enemies.',
-        stats: { Damage: 10, Range: 4, Cooldown: '1s', 'Money Bonus': '20%' },
-        cost: towerConfigurations.money.cost,
+        stats: { Damage: config.damage, Range: config.range, Cooldown: `${config.cooldown / 1000}s`, 'Money Bonus': `${(config.moneyBonus || 0) * 100}%` },
+        cost: config.cost,
       };
     case 'rapidFire': // Added rapidFire
       return {
         name: 'Rapid Fire Tower',
         description: 'Attacks very quickly with moderate damage.',
-        stats: { Damage: 10, Range: 2.5, Cooldown: '0.3s' }, // Example stats
-        cost: towerConfigurations.rapidFire?.cost || 175, // Get cost or fallback
+        stats: { Damage: config.damage, Range: config.range, Cooldown: `${config.cooldown / 1000}s` }, // Example stats
+        cost: config.cost || 175, // Get cost or fallback
       };
     case 'support': // Added support
       return {
         name: 'Support Tower',
         description: 'Boosts nearby towers.',
-        stats: { Range: 3, 'Support Bonus': '10%', 'Support Radius': 2 }, // Example stats
-        cost: towerConfigurations.support?.cost || 225, // Get cost or fallback
+        stats: { Range: config.range, 'Support Bonus': `${(config.supportBonus || 0) * 100}%`, 'Support Radius': config.supportRadius }, // Example stats
+        cost: config.cost || 225, // Get cost or fallback
       };
     default: {
       const exhaustiveCheck: never = type;

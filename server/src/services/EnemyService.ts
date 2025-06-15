@@ -156,7 +156,7 @@ export class EnemyService {
     // For now, using the direct speed from config, adjusted by difficulty.
     // If globalSpeedFactor is meant to be a wave-based increment, the formula would need adjustment.
     const speedMultiplier =
-      0.3 + (waveNumber - 1) * (enemyAttributeScalers.globalSpeedFactor || 0); // Example if speed scales with waves
+      0.2 + (waveNumber - 1) * (enemyAttributeScalers.globalSpeedFactor || 0); // Example if speed scales with waves
     return parseFloat(
       (baseAttributes.speed * difficultyMultiplier * speedMultiplier).toFixed(2)
     );

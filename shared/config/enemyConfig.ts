@@ -12,28 +12,28 @@ export const enemyConfigurations: Record<EnemyType, EnemyBaseAttributes> = {
   basic: {
     health: 100,
     speed: 1.0, // Was 0.5, then 1.5 in a comment, then 0.5. Sticking to 0.5 as per latest switch case
-    reward: 5,
+    reward: 15,
     damage: 1,
     abilities: [],
   },
   fast: {
     health: 70,
     speed: 2.0, // Was 1.5, then 2.0
-    reward: 8,
+    reward: 20,
     damage: 1,
     abilities: [], // Abilities like 'speed' are added conditionally in getEnemyAbilities based on waveNumber
   },
   tank: {
     health: 250,
     speed: 0.8, // Was 0.8, then 1.0
-    reward: 15,
+    reward: 25,
     damage: 2,
     abilities: [], // Abilities like 'shield' are added conditionally
   },
   healer: {
     health: 120,
     speed: 1.0, // Was 0.9, then 1.2
-    reward: 12,
+    reward: 20,
     damage: 1,
     abilities: ["heal" as EnemyAbility], // 'heal' is a base ability for healer
   },

@@ -65,7 +65,7 @@ export const towerConfigurations: Record<
   },
   rapidFire: {
     range: 2, // Short range
-    damage: 5, // Low damage
+    damage: 8, // Low damage
     cooldown: 250, // Very fast, 0.25 seconds
     cost: 175,
     upgradeCost: 120,

@@ -15,9 +15,9 @@ export const gameSettingsConfig: GameSettings = {
     hard: 60,
   },
   initialMoney: {
-    easy: 1000,
-    normal: 200, // This was 200 in GameService, previously 500 in some comments
-    hard: 150, // This was 150 in GameService, previously 300 in some comments
+    easy: 500,
+    normal: 400, // This was 200 in GameService, previously 500 in some comments
+    hard: 300, // This was 150 in GameService, previously 300 in some comments
   },
   enemySpawnDelayMs: 500, // from ENEMY_SPAWN_DELAY_MS in EnemyService
   gameTickRateMs: 100, // from GameLoopService constructor in GameService
