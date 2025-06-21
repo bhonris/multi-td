@@ -307,11 +307,14 @@ export class AttackService {
 
     // Update player statistics if we later implement them
     const player = game.players.find((p) => p.id === playerId);
-    if (player && player.statistics) {
-      player.statistics.enemiesDefeated =
-        (player.statistics.enemiesDefeated || 0) + 1;
-      player.statistics.moneyEarned =
-        (player.statistics.moneyEarned || 0) + rewardAmount;
+    if (player) {
+      player.money += rewardAmount;
+      if (player.statistics) {
+        player.statistics.enemiesDefeated =
+          (player.statistics.enemiesDefeated || 0) + 1;
+        player.statistics.moneyEarned =
+          (player.statistics.moneyEarned || 0) + rewardAmount;
+      }
     }
   }
 }
