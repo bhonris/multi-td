@@ -315,6 +315,7 @@ const GameMap: React.FC<GameMapProps> = ({
   const [towerAngles, setTowerAngles] = useState<Record<string, number>>({});
   const [smoothedEnemies, setSmoothedEnemies] = useState<SmoothedEnemy[]>([]);
   const [impacts, setImpacts] = useState<{ position: Position, towerType: TowerType, timestamp: number, hitRadius?: number }[]>([]);
+  const [hoveredTowerId, setHoveredTowerId] = useState<string | null>(null);
 
   // Update tower angles
   useEffect(() => {
@@ -555,6 +556,31 @@ const GameMap: React.FC<GameMapProps> = ({
     return null;
   };
 
+  const renderHoveredTowerRange = () => {
+    if (hoveredTowerId && mapRef.current) {
+      const tower = towers.find(t => t.id === hoveredTowerId);
+      if (!tower) return null;
+      const towerConfig = towerConfigurations[tower.type as TowerType];
+      if (!towerConfig) return null;
+      const cellSize = 40;
+      const mapPadding = 10;
+      const cellWithGap = cellSize + 1;
+      const left = tower.position.x * cellWithGap + cellWithGap / 2 + mapPadding;
+      const top = tower.position.y * cellWithGap + cellWithGap / 2 + mapPadding;
+      return (
+        <RangeIndicator
+          range={tower.attributes.range}
+          style={{
+            left: `${left}px`,
+            top: `${top}px`,
+            pointerEvents: 'none', // Ensure it doesn't interfere with mouse events on towers
+          }}
+        />
+      );
+    }
+    return null;
+  };
+
   // The component must return a JSX element or null.
   return (
     <MapContainer ref={mapRef}>
@@ -562,6 +588,7 @@ const GameMap: React.FC<GameMapProps> = ({
         {renderGrid()}
       </Grid>
       {renderSelectedTowerRange()}
+      {renderHoveredTowerRange()}
       {towers.map(tower => {
         const position = getCellPosition(tower.position);
         const currentAngle = towerAngles[tower.id] || 0;
@@ -576,6 +603,8 @@ const GameMap: React.FC<GameMapProps> = ({
           <div
             key={tower.id}
             style={towerStyle}
+            onMouseEnter={() => setHoveredTowerId(tower.id)}
+            onMouseLeave={() => setHoveredTowerId(null)}
           >
             <TowerSprite
               type={tower.type}
