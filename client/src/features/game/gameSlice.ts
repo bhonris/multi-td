@@ -45,13 +45,22 @@ export const fetchGameState = createAsyncThunk(
 
 export const createGame = createAsyncThunk(
   "game/createGame",
-  async (options: {
-    hostId: string;
-    maxPlayers: number;
-    difficulty: string;
-  }) => {
-    const response = await api.post("/api/game", options);
-    return response.data;
+  async (
+    options: {
+      hostId: string;
+      maxPlayers: number;
+      difficulty: string;
+    },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await api.post("/api/game", options);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to create game"
+      );
+    }
   }
 );
 
@@ -221,8 +230,17 @@ const gameSlice = createSlice({
         state.loading = false;
         state.error = action.error.message || "Failed to fetch game state";
       })
+      .addCase(createGame.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
       .addCase(createGame.fulfilled, (state, action) => {
+        state.loading = false;
         state.currentGame = action.payload;
+      })
+      .addCase(createGame.rejected, (state, action) => {
+        state.loading = false;
+        state.error = (action.payload as string) || "Failed to create game";
       })
       .addCase(joinGame.fulfilled, (state, action) => {
         state.currentGame = action.payload;

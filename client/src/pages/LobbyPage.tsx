@@ -1,3 +1,4 @@
+import type { Game } from '@shared/types';
 import React, { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -7,8 +8,7 @@ import { fetchGameState, gameUpdated, joinGame } from '../features/game/gameSlic
 import { initializeSocket } from '../features/socket/socketSlice';
 import { useGameBroadcast } from '../hooks/useGameBroadcast';
 import { useNotifications } from '../hooks/useNotifications';
-import { AppDispatch, RootState } from '../store';
-import { Game } from '../types';
+import type { AppDispatch, RootState } from '../store';
 import { checkServerSync, logGameState } from '../utils/debugHelpers';
 import socketManager from '../utils/socketManager';
 
@@ -154,7 +154,7 @@ const LobbyPage: React.FC<{}> = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
   const { currentGame, loading, error } = useSelector((state: RootState) => state.game);
-  const { currentUser, isAuthenticated } = useSelector((state: RootState) => state.user);
+  const { currentUser } = useSelector((state: RootState) => state.user);
   const { connected } = useSelector((state: RootState) => state.socket);
   const { showNotification: notify } = useNotifications();
 
@@ -196,10 +196,10 @@ const LobbyPage: React.FC<{}> = () => {
     }
   }, [currentPlayerInGame]);
 
-  // Redirect if not authenticated and fetch initial game state
+  // Redirect if there is no user and fetch initial game state
   useEffect(() => {
-    if (!isAuthenticated || !currentUser) {
-      navigate('/username-entry');
+    if (!currentUser) {
+      navigate('/');
       return;
     }
 
@@ -207,7 +207,7 @@ const LobbyPage: React.FC<{}> = () => {
       dispatch(initializeSocket());
       dispatch(fetchGameState(gameId));
     }
-  }, [dispatch, gameId, isAuthenticated, currentUser, navigate]);
+  }, [dispatch, gameId, currentUser, navigate]);
   // Set up socket connection and event listeners
   useEffect(() => {
     const socket = socketManager.getSocket();
@@ -310,7 +310,7 @@ const LobbyPage: React.FC<{}> = () => {
         }
       });
 
-      socket.on('game-started', (game: any) => {
+      socket.on('game-started', (game: Game) => {
         console.log('Game started event received!', game);
         handleGameStarted(game);
       });
