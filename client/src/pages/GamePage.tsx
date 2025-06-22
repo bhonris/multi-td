@@ -116,7 +116,7 @@ const GamePage: React.FC = () => {
           console.log('Emitted join-game event from GamePage for', gameId);
         });
 
-        socket.on('game-updated', (gameData: Game) => { // Use Game type
+        socket.on('game-updated', () => { // Use Game type
           console.log('Game updated event received in GamePage');
           // No action needed - this is handled by 'game-state-update'
         });

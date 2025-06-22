@@ -4,7 +4,7 @@ import {
   destroySocket,
   initializeSocket,
 } from "../features/socket/socketSlice";
-import { AppDispatch } from "../store";
+import type { AppDispatch } from "../store";
 
 /**
  * Custom hook to initialize the socket connection when the app starts

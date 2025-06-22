@@ -6,7 +6,7 @@ import {
   socketConnected,
   socketDisconnected,
 } from "../features/socket/socketSlice";
-import { AppDispatch, RootState } from "../store";
+import type { AppDispatch, RootState } from "../store";
 import socketManager from "../utils/socketManager";
 
 /**

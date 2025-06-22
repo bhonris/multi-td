@@ -34,23 +34,6 @@ const NavLink = styled(Link)`
   }
 `;
 
-const UserInfo = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-`;
-
-const LogoutButton = styled.button`
-  background: none;
-  color: #f0f0f0;
-  border: 1px solid #4d9aff;
-  padding: 6px 12px;
-  
-  &:hover {
-    background-color: rgba(77, 154, 255, 0.1);
-  }
-`;
-
 const Header: React.FC = () => {
 
   return (

@@ -1,5 +1,5 @@
+import type { Position } from "@shared/types";
 import { useEffect, useState } from "react";
-import { Position } from "../types";
 
 /**
  * Hook for creating and managing the tower defense game map grid

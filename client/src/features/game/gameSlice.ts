@@ -1,6 +1,18 @@
-import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
+import {
+  createAsyncThunk,
+  createSlice,
+  type PayloadAction,
+} from "@reduxjs/toolkit";
 import type { Enemy, Game, Tower } from "@shared/types"; // Updated import
 import api from "../../utils/api";
+
+type ApiError = {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+};
 
 export interface GameState {
   // Export GameState
@@ -26,24 +38,34 @@ const initialState: GameState = {
 };
 
 // Async thunks
-export const fetchGameState = createAsyncThunk(
-  "game/fetchGameState",
-  async (gameId: string, { rejectWithValue }) => {
-    try {
-      console.log(`Fetching game state for game: ${gameId}`);
-      const response = await api.get(`/api/game/${gameId}`);
-      console.log(`Game state fetched successfully:`, response.data);
-      return response.data;
-    } catch (error: any) {
-      console.error(`Error fetching game state for game ${gameId}:`, error);
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to fetch game state"
-      );
-    }
+export const fetchGameState = createAsyncThunk<
+  Game,
+  string,
+  { rejectValue: string }
+>("game/fetchGameState", async (gameId: string, { rejectWithValue }) => {
+  try {
+    console.log(`Fetching game state for game: ${gameId}`);
+    const response = await api.get<Game>(`/api/game/${gameId}`);
+    console.log(`Game state fetched successfully:`, response.data);
+    return response.data;
+  } catch (e: unknown) {
+    const error = e as ApiError;
+    console.error(`Error fetching game state for game ${gameId}:`, error);
+    return rejectWithValue(
+      error.response?.data?.message || "Failed to fetch game state"
+    );
   }
-);
+});
 
-export const createGame = createAsyncThunk(
+export const createGame = createAsyncThunk<
+  Game,
+  {
+    hostId: string;
+    maxPlayers: number;
+    difficulty: string;
+  },
+  { rejectValue: string }
+>(
   "game/createGame",
   async (
     options: {
@@ -54,9 +76,10 @@ export const createGame = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const response = await api.post("/api/game", options);
+      const response = await api.post<Game>("/api/game", options);
       return response.data;
-    } catch (error: any) {
+    } catch (e: unknown) {
+      const error = e as ApiError;
       return rejectWithValue(
         error.response?.data?.message || "Failed to create game"
       );
@@ -64,11 +87,27 @@ export const createGame = createAsyncThunk(
   }
 );
 
-export const joinGame = createAsyncThunk(
+export const joinGame = createAsyncThunk<
+  Game,
+  { gameId: string; playerId: string },
+  { rejectValue: string }
+>(
   "game/joinGame",
-  async ({ gameId, playerId }: { gameId: string; playerId: string }) => {
-    const response = await api.post(`/api/game/${gameId}/join`, { playerId });
-    return response.data;
+  async (
+    { gameId, playerId }: { gameId: string; playerId: string },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await api.post<Game>(`/api/game/${gameId}/join`, {
+        playerId,
+      });
+      return response.data;
+    } catch (e: unknown) {
+      const error = e as ApiError;
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to join game"
+      );
+    }
   }
 );
 
@@ -76,7 +115,10 @@ const gameSlice = createSlice({
   name: "game",
   initialState,
   reducers: {
-    gameUpdated: (state, action: PayloadAction<Game | any>) => {
+    gameUpdated: (
+      state,
+      action: PayloadAction<Partial<Game> & { error?: string }>
+    ) => {
       console.log("gameSlice: gameUpdated received", action.payload);
 
       // If the payload contains an error, log it and return
@@ -90,7 +132,7 @@ const gameSlice = createSlice({
 
       // If the payload is a full Game object, update everything
       if (action.payload && action.payload.id && action.payload.hostId) {
-        state.currentGame = action.payload;
+        state.currentGame = action.payload as Game;
         state.currentWave = action.payload.wave || 0;
         state.baseHealth = action.payload.baseHealth || 0;
         state.money = action.payload.money || {};
@@ -198,9 +240,7 @@ const gameSlice = createSlice({
     baseHealthUpdated: (state, action: PayloadAction<number>) => {
       state.baseHealth = action.payload;
     },
-    clearGame: (state) => {
-      return initialState;
-    },
+    clearGame: () => initialState,
   },
   extraReducers: (builder) => {
     builder
@@ -210,7 +250,7 @@ const gameSlice = createSlice({
       })
       .addCase(fetchGameState.fulfilled, (state, action) => {
         state.loading = false;
-        const payload = action.payload as Game;
+        const payload = action.payload;
         if (payload) {
           state.currentGame = payload;
           state.currentWave = payload.wave || 0;
@@ -228,7 +268,7 @@ const gameSlice = createSlice({
       })
       .addCase(fetchGameState.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message || "Failed to fetch game state";
+        state.error = action.payload || "Failed to fetch game state";
       })
       .addCase(createGame.pending, (state) => {
         state.loading = true;
@@ -240,10 +280,14 @@ const gameSlice = createSlice({
       })
       .addCase(createGame.rejected, (state, action) => {
         state.loading = false;
-        state.error = (action.payload as string) || "Failed to create game";
+        state.error = action.payload || "Failed to create game";
       })
       .addCase(joinGame.fulfilled, (state, action) => {
         state.currentGame = action.payload;
+      })
+      .addCase(joinGame.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || "Failed to join game";
       });
   },
 });

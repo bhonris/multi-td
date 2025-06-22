@@ -1,5 +1,5 @@
+import type { TowerType } from '@shared/types';
 import React from 'react';
-import { TowerType } from '../../types';
 
 interface TowerSpriteProps {
   type: TowerType;
