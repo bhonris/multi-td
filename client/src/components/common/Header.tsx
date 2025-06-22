@@ -1,9 +1,6 @@
 import React from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import styled from 'styled-components';
-import { logout } from '../../features/user/userSlice';
-import { RootState } from '../../store';
 
 const HeaderContainer = styled.header`
   background-color: #1e1e1e;
@@ -55,44 +52,12 @@ const LogoutButton = styled.button`
 `;
 
 const Header: React.FC = () => {
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const { isAuthenticated, currentUser, isTemporaryUser } = useSelector((state: RootState) => state.user);
-
-  const handleLogout = () => {
-    dispatch(logout());
-    navigate('/');
-  };
 
   return (
     <HeaderContainer>
       <Logo to="/">TD Vibe</Logo>      <Navigation>
         <NavLink to="/">Home</NavLink>
-        {isAuthenticated ? (
-          <>
-            <UserInfo>
-              {!isTemporaryUser && (
-                <NavLink to={`/profile`}>
-                  {currentUser?.username}
-                </NavLink>
-              )}
-              {isTemporaryUser && (
-                <span>
-                  {currentUser?.username}
-                </span>
-              )}
-              <LogoutButton onClick={handleLogout}>
-                {isTemporaryUser ? 'Change Username' : 'Logout'}
-              </LogoutButton>
-            </UserInfo>
-          </>
-        ) : (
-          <>
-            <NavLink to="/username-entry">Quick Play</NavLink>
-            <NavLink to="/login">Login</NavLink>
-            <NavLink to="/register">Register</NavLink>
-          </>
-        )}
+
       </Navigation>
     </HeaderContainer>
   );

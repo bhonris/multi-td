@@ -46,7 +46,6 @@ const GamePage: React.FC = () => {
 
     if (!currentUser) {
       console.error('Missing user, redirecting to username-entry');
-      navigate('/username-entry', { state: { redirect: `/game/${gameId}` } });
       return;
     }
 
