@@ -1,4 +1,4 @@
-import express, { RequestHandler } from "express";
+import express, { RequestHandler, Router } from "express";
 import { UserController } from "../controllers/UserController";
 
 const router = express.Router();
@@ -28,4 +28,4 @@ const updateProfileHandler: RequestHandler = async (req, res) => {
 };
 router.put("/profile/:userId", updateProfileHandler);
 
-export const userRoutes = router;
+export const userRoutes: Router = router;

@@ -14,8 +14,8 @@ services:
 
   server:
     build:
-      context: ./server
-      dockerfile: ../docker/server/Dockerfile
+      context: .
+      dockerfile: ./server/Dockerfile
     ports:
       - "4000:4000"
     environment:

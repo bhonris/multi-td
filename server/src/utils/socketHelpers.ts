@@ -1,12 +1,12 @@
 // Helper functions for socket communications
-import { Socket } from "socket.io";
+import { Server, Socket } from "socket.io";
 
 /**
  * Get all sockets for a specific player from socket.io Server instance
  */
-export const getPlayerSockets = (io: any, playerId: string): Socket[] => {
+export const getPlayerSockets = (io: Server, playerId: string): Socket[] => {
   return Array.from(io.sockets.sockets.values()).filter(
-    (s: any) => s.handshake.query.playerId === playerId
+    (s: Socket) => s.handshake.query.playerId === playerId
   );
 };
 
@@ -14,11 +14,11 @@ export const getPlayerSockets = (io: any, playerId: string): Socket[] => {
  * Sends an event to a specific player through all their connected sockets
  */
 export const sendToPlayer = (
-  io: any,
+  io: Server,
   playerId: string,
   eventName: string,
   data: any
-): void => {
+): boolean => {
   const playerSockets = getPlayerSockets(io, playerId);
 
   if (playerSockets.length > 0) {
@@ -38,7 +38,7 @@ export const sendToPlayer = (
  * Will broadcast to room, then to individual sockets as backup
  */
 export const reliableBroadcast = (
-  io: any,
+  io: Server,
   roomName: string,
   eventName: string,
   data: any
