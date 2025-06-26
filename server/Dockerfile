@@ -14,7 +14,6 @@ COPY shared/package.json ./shared/
 # Install pnpm
 RUN npm install -g pnpm
 
-
 # Install all dependencies
 RUN NODE_ENV=development pnpm install -r
 
@@ -25,10 +24,12 @@ COPY shared/ ./shared/
 # Set working directory to server
 WORKDIR /usr/src/app/server
 # Build the TypeScript code
+RUN pnpm install --force
+RUN ls -la ./node_modules
 RUN pnpm run build
 
 # Expose the port the app runs on
 EXPOSE 4000
 
 # Define the command to run the application
-CMD [ "node", "dist/index.js" ]
+CMD [ "node", "dist/src/index.js" ]
