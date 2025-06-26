@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const API_URL =
+  "https://vibe-td-server.thankfultree-bde904f6.westus2.azurecontainerapps.io";
 
 const api = axios.create({
   baseURL: API_URL,

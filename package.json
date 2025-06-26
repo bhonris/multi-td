@@ -24,5 +24,11 @@
   },
   "dependencies": {
     "tsconfig-paths": "^4.2.0"
-  }
+  },
+  "private": true,
+  "workspaces": [
+    "client",
+    "server",
+    "shared"
+  ]
 }
