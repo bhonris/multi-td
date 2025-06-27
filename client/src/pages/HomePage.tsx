@@ -84,7 +84,7 @@ const HomePage: React.FC = () => {
         const resultAction = await dispatch(
           createGame({
             hostId: currentUser.id,
-            maxPlayers: 4,
+            maxPlayers: 16,
             difficulty: 'normal',
           })
         );
