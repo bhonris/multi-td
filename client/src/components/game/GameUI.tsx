@@ -676,7 +676,7 @@ const GameUI: React.FC<GameUIProps> = ({
             <SellButton
               onClick={() => onSellTower(selectedTower.id)}
             >
-              Sell (${Math.floor((selectedTower.attributes.cost + 
+              Sell (${Math.floor((selectedTower.attributes.cost +
                 (selectedTower.level - 1) * selectedTower.attributes.upgradeCost) * 0.8)})
             </SellButton>
           </ButtonContainer>

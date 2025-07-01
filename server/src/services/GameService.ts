@@ -431,12 +431,12 @@ export class GameService {
     if (!game) {
       return { success: false, message: "Game not found" };
     }
-    
+
     const player = game.players.find((p) => p.id === playerId);
     if (!player) {
       return { success: false, message: "Player not found in game" };
     }
-    
+
     const towerIndex = game.towers.findIndex(
       (t) => t.id === towerId && t.playerId === playerId
     );
@@ -448,20 +448,23 @@ export class GameService {
     }
 
     const tower = game.towers[towerIndex];
-    
+
     // Calculate sell value: 80% of original cost + upgrade costs
-    const originalCost = this.towerService.getTowerAttributes(tower.type, 1).cost;
+    const originalCost = this.towerService.getTowerAttributes(
+      tower.type,
+      1
+    ).cost;
     const upgradesCost = (tower.level - 1) * tower.attributes.upgradeCost;
     const totalCost = originalCost + upgradesCost;
     const sellValue = Math.floor(totalCost * 0.8);
 
     // Remove tower from game
     game.towers.splice(towerIndex, 1);
-    
+
     // Give money back to player
     player.money += sellValue;
     game.money[playerId] = player.money; // Update money map if used
-    
+
     // Update game state
     game.updatedAt = new Date();
     games.set(gameId, game);

@@ -1,4 +1,9 @@
-import { BuildTowerResult, Game, SellTowerResult, UpgradeTowerResult } from "@shared/types"; // Corrected path for Game and other types
+import {
+  BuildTowerResult,
+  Game,
+  SellTowerResult,
+  UpgradeTowerResult,
+} from "@shared/types"; // Corrected path for Game and other types
 import { Server } from "socket.io";
 import { GameService } from "./GameService";
 
@@ -257,7 +262,7 @@ export const setupSocket = (io: Server) => {
             io.to(`game-${gameId}`).emit("tower-sold", {
               towerId: result.towerId,
               sellValue: result.sellValue,
-              playerId
+              playerId,
             });
             io.to(`game-${gameId}`).emit("money-updated", {
               playerId,

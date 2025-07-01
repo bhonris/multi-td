@@ -255,7 +255,7 @@ const GamePage: React.FC = () => {
         playerId: currentUser.id,
         towerId
       });
-      
+
       // Clear selected tower if it's the one being sold
       if (selectedTower?.id === towerId) {
         setSelectedTower(null);
