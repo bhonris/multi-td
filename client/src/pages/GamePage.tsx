@@ -246,6 +246,23 @@ const GamePage: React.FC = () => {
     }
   };
 
+  const handleSellTower = (towerId: string) => {
+    const socket = socketManager.getSocket();
+
+    if (socket && gameId && currentUser) {
+      socket.emit('sell-tower', {
+        gameId,
+        playerId: currentUser.id,
+        towerId
+      });
+      
+      // Clear selected tower if it's the one being sold
+      if (selectedTower?.id === towerId) {
+        setSelectedTower(null);
+      }
+    }
+  };
+
   const handleStartWave = () => {
     const socket = socketManager.getSocket();
 
@@ -294,6 +311,7 @@ const GamePage: React.FC = () => {
         selectedTowerType={selectedTowerType}
         selectedTower={selectedTower}
         onUpgradeTower={handleUpgradeTower}
+        onSellTower={handleSellTower}
         onStartWave={handleStartWave}
       />
     </GamePageContainer>

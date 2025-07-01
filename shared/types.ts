@@ -148,6 +148,14 @@ export interface UpgradeTowerResult {
   game?: Game; // Or relevant parts of the game state
 }
 
+export interface SellTowerResult {
+  success: boolean;
+  message?: string;
+  sellValue?: number;
+  towerId?: string;
+  game?: Game; // Or relevant parts of the game state
+}
+
 // Added from server/src/services/GameLoopService.ts (or similar)
 export type GameUpdateHandler = (gameId: string, game: Game) => void;
 

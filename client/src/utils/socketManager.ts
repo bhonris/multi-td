@@ -9,6 +9,7 @@ export interface ServerToClientEvents {
   "game-state-update": (data: any) => void;
   "tower-built": (tower: any) => void;
   "tower-upgraded": (tower: any) => void;
+  "tower-sold": (data: any) => void;
   "money-updated": (data: any) => void;
   "wave-started": (data: any) => void;
   "enemy-damaged": (data: any) => void;
@@ -25,6 +26,7 @@ export interface ClientToServerEvents {
   "join-game": (data: { gameId: string; playerId: string }) => void;
   "build-tower": (data: any) => void;
   "upgrade-tower": (data: any) => void;
+  "sell-tower": (data: any) => void;
   "start-wave": (data: { gameId: string }) => void;
   "player-ready": (data: any) => void;
   "start-game": (data: { gameId: string }) => void;

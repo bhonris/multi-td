@@ -14,6 +14,7 @@ interface GameUIProps {
   selectedTower: Tower | null;
   onTowerSelect: (type: TowerType) => void;
   onUpgradeTower: (towerId: string) => void;
+  onSellTower: (towerId: string) => void;
   onStartWave: () => void;
 }
 
@@ -163,6 +164,21 @@ const UpgradeButton = styled(Button) <{ canAfford: boolean }>`
   &:hover {
     background: ${props => props.canAfford ? '#45a049' : '#666'};
   }
+`;
+
+const SellButton = styled(Button)`
+  background: #e74c3c;
+  margin-top: 10px;
+  
+  &:hover {
+    background: #c0392b;
+  }
+`;
+
+const ButtonContainer = styled.div`
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
 `;
 
 const MaxLevelIndicator = styled.div`
@@ -528,6 +544,7 @@ const GameUI: React.FC<GameUIProps> = ({
   selectedTower,
   onTowerSelect,
   onUpgradeTower,
+  onSellTower,
   onStartWave
 }) => {
   const upgradePreview = useTowerUpgradePreview(selectedTower);
@@ -632,14 +649,16 @@ const GameUI: React.FC<GameUIProps> = ({
                 '%'
               )}
 
-              <UpgradeButton
-                canAfford={upgradePreview.canAfford}
-                onClick={() => onUpgradeTower(selectedTower.id)}
-                disabled={!upgradePreview.canAfford}
-              >
-                Upgrade (${upgradePreview.upgradeCost})
-                {!upgradePreview.canAfford && ' - Need more money'}
-              </UpgradeButton>
+              <ButtonContainer>
+                <UpgradeButton
+                  canAfford={upgradePreview.canAfford}
+                  onClick={() => onUpgradeTower(selectedTower.id)}
+                  disabled={!upgradePreview.canAfford}
+                >
+                  Upgrade (${upgradePreview.upgradeCost})
+                  {!upgradePreview.canAfford && ' - Need more money'}
+                </UpgradeButton>
+              </ButtonContainer>
             </UpgradePreviewContainer>
           )}
 
@@ -648,6 +667,19 @@ const GameUI: React.FC<GameUIProps> = ({
               ⭐ MAX LEVEL REACHED ⭐
             </MaxLevelIndicator>
           )}
+
+          {/* Sell button - always show for placed towers */}
+          <ButtonContainer>
+            {upgradePreview?.isMaxLevel && (
+              <div style={{ flex: 1 }}></div>
+            )}
+            <SellButton
+              onClick={() => onSellTower(selectedTower.id)}
+            >
+              Sell (${Math.floor((selectedTower.attributes.cost + 
+                (selectedTower.level - 1) * selectedTower.attributes.upgradeCost) * 0.8)})
+            </SellButton>
+          </ButtonContainer>
         </TowerInfo>
       );
     }

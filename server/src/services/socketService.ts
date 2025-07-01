@@ -1,4 +1,4 @@
-import { BuildTowerResult, Game, UpgradeTowerResult } from "@shared/types"; // Corrected path for Game and other types
+import { BuildTowerResult, Game, SellTowerResult, UpgradeTowerResult } from "@shared/types"; // Corrected path for Game and other types
 import { Server } from "socket.io";
 import { GameService } from "./GameService";
 
@@ -242,6 +242,31 @@ export const setupSocket = (io: Server) => {
             });
           } else {
             socket.emit("upgrade-error", { message: result.message }); // Use result.message
+          }
+        });
+    });
+
+    socket.on("sell-tower", ({ gameId, playerId, towerId }) => {
+      gameService
+        .sellTower(gameId, playerId, towerId)
+        .then((result: SellTowerResult) => {
+          if (result.success && result.game) {
+            const playerMoney = result.game.players.find(
+              (p) => p.id === playerId
+            )?.money;
+            io.to(`game-${gameId}`).emit("tower-sold", {
+              towerId: result.towerId,
+              sellValue: result.sellValue,
+              playerId
+            });
+            io.to(`game-${gameId}`).emit("money-updated", {
+              playerId,
+              money: playerMoney,
+            });
+            // Send full game state update to ensure UI is in sync
+            io.to(`game-${gameId}`).emit("game-state-update", result.game);
+          } else {
+            socket.emit("sell-error", { message: result.message });
           }
         });
     });
