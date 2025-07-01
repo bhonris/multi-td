@@ -11,3 +11,31 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Tower selection and hover effects */
+.tower-selected {
+  box-shadow: 0 0 8px 2px #4CAF50;
+  border: 2px solid #4CAF50;
+  transition: all 0.2s ease-in-out;
+}
+
+.tower-hovered {
+  box-shadow: 0 0 6px 1px #FFC107;
+  border: 2px solid #FFC107;
+  transition: all 0.2s ease-in-out;
+}

@@ -95,14 +95,14 @@ export const defaultTowerAttributes: TowerAttributes = {
 };
 
 export const towerAttributeScalers = {
-  levelMultiplierFactor: 0.3, // For range, damage
-  cooldownReductionFactor: 0.1, // Cooldown reduces by 10% of base per level (example)
-  splashRadiusLevelFactor: 0.3,
-  slowFactorLevelBonus: 0.1,
-  moneyBonusLevelBonus: 0.1,
-  supportRadiusLevelFactor: 0.15,
-  supportBonusLevelBonus: 0.05,
-  upgradeCostLevelFactor: 0.7,
+  levelMultiplierFactor: 0.4, // Increased for more noticeable upgrades
+  cooldownReductionFactor: 0.12, // Slightly faster cooldown reduction
+  splashRadiusLevelFactor: 0.25, // More splash radius growth
+  slowFactorLevelBonus: 0.08, // Better slow effect scaling
+  moneyBonusLevelBonus: 0.12, // Better money generation scaling
+  supportRadiusLevelFactor: 0.2, // More support radius growth
+  supportBonusLevelBonus: 0.08, // Better support bonus scaling
+  upgradeCostLevelFactor: 1.5, // More expensive upgrades (was 0.7)
 };
 
 // Helper function, similar to client's getBaseTowerAttributesForClient

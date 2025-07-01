@@ -3,6 +3,8 @@ import type { Tower, TowerType } from "@shared/types";
 import React from 'react';
 import styled from 'styled-components';
 import Button from '../common/Button';
+import { useTowerUpgradePreview } from '../../hooks/useTowerUpgradePreview';
+import { formatStatDelta } from '@shared/utils/towerUpgradeUtils';
 
 interface GameUIProps {
   baseHealth: number;
@@ -107,6 +109,70 @@ const TowerStats = styled.div`
 
 const StatName = styled.div`
   color: #aaa;
+`;
+
+const UpgradePreviewContainer = styled.div`
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid #444;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+`;
+
+const UpgradeTitle = styled.h4`
+  margin: 0 0 10px 0;
+  color: #4CAF50;
+  font-size: 0.9rem;
+`;
+
+const StatsComparison = styled.div`
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 5px;
+  font-size: 0.8rem;
+`;
+
+const CurrentStat = styled.div`
+  color: #aaa;
+  text-align: right;
+`;
+
+const StatArrow = styled.div`
+  color: #4CAF50;
+  font-weight: bold;
+`;
+
+const NewStat = styled.div`
+  color: #4CAF50;
+  font-weight: bold;
+`;
+
+const StatDelta = styled.span<{ positive?: boolean }>`
+  color: ${props => props.positive ? '#4CAF50' : '#f44336'};
+  font-weight: bold;
+  margin-left: 4px;
+`;
+
+const UpgradeButton = styled(Button) <{ canAfford: boolean }>`
+  background: ${props => props.canAfford ? '#4CAF50' : '#666'};
+  opacity: ${props => props.canAfford ? 1 : 0.6};
+  cursor: ${props => props.canAfford ? 'pointer' : 'not-allowed'};
+  
+  &:hover {
+    background: ${props => props.canAfford ? '#45a049' : '#666'};
+  }
+`;
+
+const MaxLevelIndicator = styled.div`
+  background: linear-gradient(90deg, #9C27B0, #673AB7);
+  color: white;
+  padding: 8px;
+  border-radius: 8px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 0.9rem;
 `;
 
 const StartWaveButton = styled(Button)`
@@ -464,6 +530,8 @@ const GameUI: React.FC<GameUIProps> = ({
   onUpgradeTower,
   onStartWave
 }) => {
+  const upgradePreview = useTowerUpgradePreview(selectedTower);
+
   const handleTowerClick = (type: TowerType) => {
     onTowerSelect(type);
   };
@@ -482,14 +550,37 @@ const GameUI: React.FC<GameUIProps> = ({
   const renderTowerInfo = () => {
     if (selectedTower) {
       const uiInfo = getTowerInfo(selectedTower.type);
-      const upgradeCost = selectedTower.attributes.upgradeCost;
-      const MAX_TOWER_LEVEL = 3; // Example, should ideally come from shared config (e.g. gameSettingsConfig.maxTowerLevel)
-      const isMaxLevel = selectedTower.level >= MAX_TOWER_LEVEL;
+
+      const renderStatComparison = (
+        statName: string,
+        currentValue: number,
+        newValue: number,
+        suffix = ''
+      ) => {
+        const delta = newValue - currentValue;
+        if (delta === 0) return null;
+
+        return (
+          <StatsComparison key={statName}>
+            <CurrentStat>
+              {statName}: {currentValue.toFixed(1)}{suffix}
+            </CurrentStat>
+            <StatArrow>→</StatArrow>
+            <NewStat>
+              {newValue.toFixed(1)}{suffix}
+              <StatDelta positive={delta > 0}>
+                ({formatStatDelta(delta, suffix)})
+              </StatDelta>
+            </NewStat>
+          </StatsComparison>
+        );
+      };
 
       return (
         <TowerInfo>
           <TowerTitle>{uiInfo.name} (Level {selectedTower.level})</TowerTitle>
           <p>{uiInfo.description}</p>
+
           <TowerStats>
             {Object.entries(selectedTower.attributes).map(([key, value]) => {
               if (key !== 'cost' && key !== 'upgradeCost') {
@@ -504,15 +595,58 @@ const GameUI: React.FC<GameUIProps> = ({
               return null;
             })}
           </TowerStats>
-          {!isMaxLevel ? (
-            <Button
-              onClick={() => onUpgradeTower(selectedTower.id)}
-              disabled={money < upgradeCost}
-            >
-              Upgrade (${upgradeCost})
-            </Button>
-          ) : (
-            <div>Max Level Reached</div>
+
+          {upgradePreview && !upgradePreview.isMaxLevel && (
+            <UpgradePreviewContainer>
+              <UpgradeTitle>Upgrade Preview (Level {upgradePreview.nextLevel})</UpgradeTitle>
+
+              {renderStatComparison(
+                'Damage',
+                upgradePreview.currentAttributes.damage,
+                upgradePreview.upgradedAttributes.damage
+              )}
+
+              {renderStatComparison(
+                'Range',
+                upgradePreview.currentAttributes.range,
+                upgradePreview.upgradedAttributes.range
+              )}
+
+              {upgradePreview.statDeltas.cooldown !== 0 && renderStatComparison(
+                'Cooldown',
+                upgradePreview.currentAttributes.cooldown,
+                upgradePreview.upgradedAttributes.cooldown,
+                'ms'
+              )}
+
+              {upgradePreview.statDeltas.splashRadius !== 0 && renderStatComparison(
+                'Splash Radius',
+                upgradePreview.currentAttributes.splashRadius || 0,
+                upgradePreview.upgradedAttributes.splashRadius || 0
+              )}
+
+              {upgradePreview.statDeltas.slowFactor !== 0 && renderStatComparison(
+                'Slow Factor',
+                upgradePreview.currentAttributes.slowFactor || 0,
+                upgradePreview.upgradedAttributes.slowFactor || 0,
+                '%'
+              )}
+
+              <UpgradeButton
+                canAfford={upgradePreview.canAfford}
+                onClick={() => onUpgradeTower(selectedTower.id)}
+                disabled={!upgradePreview.canAfford}
+              >
+                Upgrade (${upgradePreview.upgradeCost})
+                {!upgradePreview.canAfford && ' - Need more money'}
+              </UpgradeButton>
+            </UpgradePreviewContainer>
+          )}
+
+          {upgradePreview?.isMaxLevel && (
+            <MaxLevelIndicator>
+              ⭐ MAX LEVEL REACHED ⭐
+            </MaxLevelIndicator>
           )}
         </TowerInfo>
       );

@@ -25,7 +25,6 @@ COPY shared/ ./shared/
 WORKDIR /usr/src/app/server
 # Build the TypeScript code
 RUN pnpm install --force
-RUN ls -la ./node_modules
 RUN pnpm run build
 
 # Expose the port the app runs on

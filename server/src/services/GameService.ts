@@ -393,8 +393,8 @@ export class GameService {
       };
     }
 
-    if (tower.level >= gameSettingsConfig.maxTowerLevel) {
-      // Use from config
+    // Use the tower-specific max level instead of a global one
+    if (!this.towerService.canUpgradeTower(tower.type, tower.level)) {
       return { success: false, message: "Tower is already at max level" };
     }
 

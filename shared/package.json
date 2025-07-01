@@ -2,5 +2,11 @@
   "name": "shared",
   "version": "1.0.0",
   "main": "types.ts",
-  "license": "ISC"
+  "license": "ISC",
+  "scripts": {
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
 }

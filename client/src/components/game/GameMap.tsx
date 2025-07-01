@@ -610,6 +610,11 @@ const GameMap: React.FC<GameMapProps> = ({
               type={tower.type}
               level={tower.level}
               size={36}
+              isSelected={selectedTower?.id === tower.id}
+              isHovered={hoveredTowerId === tower.id}
+              onClick={() => onMapClick(tower.position)}
+              onMouseEnter={() => setHoveredTowerId(tower.id)}
+              onMouseLeave={() => setHoveredTowerId(null)}
             />
           </div>
         );

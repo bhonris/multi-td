@@ -8,6 +8,7 @@
     "server": "cd server && pnpm run dev",
     "build:client": "cd client && npm run build",
     "build:server": "cd server && npm run build",
+    "build:shared": "cd shared && tsc",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "install:all": "npm install && cd client && npm install && cd ../server && npm install"
   },

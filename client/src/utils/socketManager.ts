@@ -39,6 +39,7 @@ class SocketManager {
   private socket: Socket<ServerToClientEvents, ClientToServerEvents> | null =
     null;
   private API_URL =
+    import.meta.env.VITE_API_URL ||
     "https://vibe-td-server.thankfultree-bde904f6.westus2.azurecontainerapps.io";
 
   private constructor() {}
