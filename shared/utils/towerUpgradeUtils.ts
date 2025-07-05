@@ -257,3 +257,38 @@ export function calculateTotalUpgradeCost(
   }
   return totalCost;
 }
+
+/**
+ * Calculates total money spent on a tower (initial cost + all upgrade costs)
+ */
+export function calculateTotalTowerCost(
+  towerType: TowerType,
+  currentLevel: number
+): number {
+  const baseConfig = towerConfigurations[towerType];
+  const initialCost = baseConfig.cost;
+
+  if (currentLevel <= 1) {
+    return initialCost;
+  }
+
+  // Calculate total upgrade costs from level 1 to current level
+  const totalUpgradeCosts = calculateTotalUpgradeCost(
+    towerType,
+    1,
+    currentLevel
+  );
+
+  return initialCost + totalUpgradeCosts;
+}
+
+/**
+ * Calculates sell value for a tower (80% of total cost spent)
+ */
+export function calculateSellValue(
+  towerType: TowerType,
+  currentLevel: number
+): number {
+  const totalCost = calculateTotalTowerCost(towerType, currentLevel);
+  return Math.floor(totalCost * 0.8);
+}

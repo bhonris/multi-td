@@ -11,6 +11,7 @@ import {
   TowerType,
   UpgradeTowerResult,
 } from "@shared/types";
+import { calculateSellValue } from "../../../shared/utils/towerUpgradeUtils";
 import { v4 as uuidv4 } from "uuid";
 import { AttackService } from "./AttackService";
 import { EnemyService } from "./EnemyService";
@@ -362,6 +363,8 @@ export class GameService {
       attributes: towerAttributes,
       lastAttackTime: 0,
       createdAt: new Date(),
+      totalDamageDealt: 0,
+      totalKills: 0,
     };
     game.towers.push(newTower);
     game.money[playerId] = player.money; // Update money map if used
@@ -449,14 +452,8 @@ export class GameService {
 
     const tower = game.towers[towerIndex];
 
-    // Calculate sell value: 80% of original cost + upgrade costs
-    const originalCost = this.towerService.getTowerAttributes(
-      tower.type,
-      1
-    ).cost;
-    const upgradesCost = (tower.level - 1) * tower.attributes.upgradeCost;
-    const totalCost = originalCost + upgradesCost;
-    const sellValue = Math.floor(totalCost * 0.8);
+    // Calculate sell value using the shared utility function
+    const sellValue = calculateSellValue(tower.type, tower.level);
 
     // Remove tower from game
     game.towers.splice(towerIndex, 1);

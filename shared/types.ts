@@ -39,6 +39,8 @@ export interface Tower {
   target?: string; // Enemy ID
   lastAttackTime: number;
   createdAt: Date;
+  totalDamageDealt: number;
+  totalKills: number;
 }
 
 export type EnemyType = "basic" | "fast" | "tank" | "healer" | "boss";

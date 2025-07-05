@@ -35,6 +35,12 @@ const GamePage: React.FC = () => {
 
   const [selectedTowerType, setSelectedTowerType] = useState<TowerType | null>(null);
   const [selectedTower, setSelectedTower] = useState<Tower | null>(null);
+  const selectedTowerRef = useRef<Tower | null>(null);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    selectedTowerRef.current = selectedTower;
+  }, [selectedTower]);
   useEffect(() => {
     console.log('GamePage mounted with gameId:', gameId, 'and user:', currentUser?.id);
 
@@ -134,6 +140,11 @@ const GamePage: React.FC = () => {
         socket.on('tower-upgraded', (tower: Tower) => { // Use Tower type
           console.log('Tower upgraded event received:', tower);
           dispatch({ type: 'game/towerUpgraded', payload: tower });
+
+          // Update selectedTower if it's the same tower that was upgraded
+          if (selectedTowerRef.current && selectedTowerRef.current.id === tower.id) {
+            setSelectedTower(tower);
+          }
         });
 
         socket.on('money-updated', (data: { playerId: string; money: number }) => { // More specific type

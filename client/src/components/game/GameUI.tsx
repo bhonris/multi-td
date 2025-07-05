@@ -4,7 +4,7 @@ import React from 'react';
 import styled from 'styled-components';
 import Button from '../common/Button';
 import { useTowerUpgradePreview } from '../../hooks/useTowerUpgradePreview';
-import { formatStatDelta } from '@shared/utils/towerUpgradeUtils';
+import { calculateSellValue, formatStatDelta } from '@shared/utils/towerUpgradeUtils';
 
 interface GameUIProps {
   baseHealth: number;
@@ -611,6 +611,10 @@ const GameUI: React.FC<GameUIProps> = ({
               }
               return null;
             })}
+            <StatName>Total Damage Dealt</StatName>
+            <div>{selectedTower.totalDamageDealt.toFixed(1)}</div>
+            <StatName>Total Kills</StatName>
+            <div>{selectedTower.totalKills}</div>
           </TowerStats>
 
           {upgradePreview && !upgradePreview.isMaxLevel && (
@@ -676,8 +680,7 @@ const GameUI: React.FC<GameUIProps> = ({
             <SellButton
               onClick={() => onSellTower(selectedTower.id)}
             >
-              Sell (${Math.floor((selectedTower.attributes.cost +
-                (selectedTower.level - 1) * selectedTower.attributes.upgradeCost) * 0.8)})
+              Sell (${calculateSellValue(selectedTower.type, selectedTower.level)})
             </SellButton>
           </ButtonContainer>
         </TowerInfo>

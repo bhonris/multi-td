@@ -204,6 +204,9 @@ export class AttackService {
     if (damage > 0) {
       enemy.health -= damage;
       damaged = true;
+
+      // Track damage dealt by this tower
+      tower.totalDamageDealt += damage;
     }
 
     // Apply special effects based on tower type
@@ -225,6 +228,9 @@ export class AttackService {
               const splashDamage = damage * 0.5;
               otherEnemy.health -= splashDamage;
 
+              // Track splash damage dealt by this tower
+              tower.totalDamageDealt += splashDamage;
+
               console.log(
                 `Splash damage: ${splashDamage} applied to enemy ${otherEnemy.id}. Health now: ${otherEnemy.health}`
               );
@@ -232,6 +238,10 @@ export class AttackService {
               // Check if other enemy was defeated
               if (otherEnemy.health <= 0) {
                 otherEnemy.health = 0;
+
+                // Track kill count for this tower (splash kill)
+                tower.totalKills += 1;
+
                 // Add money to the player who owns the tower
                 this.addReward(game, tower.playerId, otherEnemy, tower);
               }
@@ -272,6 +282,9 @@ export class AttackService {
     if (enemy.health <= 0) {
       enemy.health = 0;
       defeated = true;
+
+      // Track kill count for this tower
+      tower.totalKills += 1;
 
       console.log(`Enemy ${enemy.id} defeated by tower ${tower.id}!`);
 
