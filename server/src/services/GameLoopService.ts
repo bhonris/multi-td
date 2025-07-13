@@ -101,6 +101,17 @@ export class GameLoopService {
       return;
     }
 
+    // Ensure all towers have the new tracking fields for backward compatibility
+    game.towers = game.towers.map((tower) => {
+      if (tower.totalDamageDealt === undefined) {
+        tower.totalDamageDealt = 0;
+      }
+      if (tower.totalKills === undefined) {
+        tower.totalKills = 0;
+      }
+      return tower;
+    });
+
     const now = Date.now();
 
     // Spawn pending enemies whose time has come

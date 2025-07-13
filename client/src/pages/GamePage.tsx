@@ -130,6 +130,14 @@ const GamePage: React.FC = () => {
         socket.on('game-state-update', (gameData: Partial<Game>) => { // Use Partial<Game> or a more specific type
           // Update enemy positions, towers, and game state
           dispatch({ type: 'game/gameUpdated', payload: gameData });
+
+          // Update selectedTower if it exists and matches a tower in the updated game state
+          if (selectedTowerRef.current && gameData.towers) {
+            const updatedTower = gameData.towers.find(tower => tower.id === selectedTowerRef.current!.id);
+            if (updatedTower) {
+              setSelectedTower(updatedTower);
+            }
+          }
         });
 
         socket.on('tower-built', (tower: Tower) => { // Use Tower type

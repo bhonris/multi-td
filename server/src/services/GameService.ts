@@ -154,7 +154,15 @@ export class GameService {
   }
 
   async getGameState(gameId: string): Promise<Game | null> {
-    return games.get(gameId) || null;
+    const game = games.get(gameId);
+    if (!game) {
+      return null;
+    }
+
+    // Ensure all towers have the new tracking fields
+    game.towers = game.towers.map((tower) => this.ensureTowerFields(tower));
+
+    return game;
   }
 
   async updatePlayerReady(
@@ -484,6 +492,19 @@ export class GameService {
     }
     // Add other checks like: is on path, is out of bounds, etc.
     return false; // Position is valid
+  }
+
+  /**
+   * Ensure towers have the new tracking fields for backward compatibility
+   */
+  private ensureTowerFields(tower: Tower): Tower {
+    if (tower.totalDamageDealt === undefined) {
+      tower.totalDamageDealt = 0;
+    }
+    if (tower.totalKills === undefined) {
+      tower.totalKills = 0;
+    }
+    return tower;
   }
 
   // ... any other existing methods like startWave, processEnemyMovement, etc.
