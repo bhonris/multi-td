@@ -1,4 +1,4 @@
-import { Game } from "../../../shared/types"; // Adjusted import path
+import { Game } from "@shared/types"; // Adjusted import path
 import { Enemy, EnemyEffect } from "../models/Enemy";
 import { AttackService } from "./AttackService";
 import { EnemyService } from "./EnemyService";

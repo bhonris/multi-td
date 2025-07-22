@@ -11,7 +11,7 @@ import {
   TowerType,
   UpgradeTowerResult,
 } from "@shared/types";
-import { calculateSellValue } from "../../../shared/utils/towerUpgradeUtils";
+import { calculateSellValue } from "@shared/utils/towerUpgradeUtils";
 import { v4 as uuidv4 } from "uuid";
 import { AttackService } from "./AttackService";
 import { EnemyService } from "./EnemyService";

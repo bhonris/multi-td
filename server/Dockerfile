@@ -21,11 +21,17 @@ RUN NODE_ENV=development pnpm install -r
 COPY server/ ./server/
 COPY shared/ ./shared/
 
-# Set working directory to server
+# Build shared package first
+WORKDIR /usr/src/app/shared
+RUN pnpm run build
+
+# Set working directory to server and build
 WORKDIR /usr/src/app/server
-# Build the TypeScript code
 RUN pnpm install --force
 RUN pnpm run build
+
+# Update module alias to use absolute path in container
+RUN sed -i 's|"@shared": "../shared/dist"|"@shared": "/usr/src/app/shared/dist"|g' package.json
 
 # Expose the port the app runs on
 EXPOSE 4000
